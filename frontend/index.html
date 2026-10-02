@@ -1,0 +1,3089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChronoSky — Time Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --navy: #0E1526;
+    --navy-panel: #172036;
+    --parchment: #EDE3CB;
+    --parchment-dim: #E2D6B8;
+    --brass: #C9974B;
+    --brass-bright: #E0B36C;
+    --cyan: #6FE3D9;
+    --ink: #2A2117;
+    --starlight: #F2F0E8;
+    --dim-starlight: #9AA3B8;
+    --danger: #C96A4B;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--navy);
+    color: var(--starlight);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(242,240,232,0.35), transparent),
+      radial-gradient(1px 1px at 80% 10%, rgba(242,240,232,0.25), transparent),
+      radial-gradient(1.5px 1.5px at 60% 70%, rgba(242,240,232,0.3), transparent),
+      radial-gradient(1px 1px at 30% 85%, rgba(242,240,232,0.25), transparent),
+      radial-gradient(1px 1px at 90% 60%, rgba(242,240,232,0.2), transparent),
+      radial-gradient(1.5px 1.5px at 45% 40%, rgba(242,240,232,0.2), transparent);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+  }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header.top {
+    margin-bottom: 20px;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .wordmark {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 32px;
+    color: var(--brass-bright);
+    letter-spacing: 0.3px;
+  }
+
+  .tagline {
+    font-size: 13.5px;
+    color: var(--dim-starlight);
+    max-width: 640px;
+    line-height: 1.5;
+  }
+
+  .tab-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    margin-bottom: 28px;
+  }
+
+  .tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    flex-shrink: 0;
+    background: transparent;
+    color: var(--dim-starlight);
+    border: 1px solid #2C3A57;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .tab-btn:hover {
+    color: var(--starlight);
+    border-color: var(--brass);
+  }
+
+  .tab-btn.active {
+    background: var(--brass);
+    color: var(--ink);
+    border-color: var(--brass);
+    font-weight: 500;
+  }
+
+  .tab-btn:focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
+  }
+
+  .mode-block {
+    display: none;
+  }
+
+  .mode-block.active {
+    display: block;
+    animation: modeFadeIn 0.35s ease;
+  }
+
+  @keyframes modeFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---- 3D Sky Dome ---- */
+  .dome-card {
+    background: var(--navy-panel);
+    border: 1px solid var(--brass);
+    border-radius: var(--radius-md);
+    padding: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #skyDomeContainer {
+    width: 100%;
+    height: 520px;
+    border-radius: var(--radius-sm);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  #skyDomeContainer:active {
+    cursor: grabbing;
+  }
+
+  #skyDomeContainer canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .dome-hint {
+    position: absolute;
+    bottom: 14px;
+    left: 18px;
+    font-size: 11.5px;
+    color: var(--dim-starlight);
+    background: rgba(14, 21, 38, 0.6);
+    padding: 5px 10px;
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  .dome-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .dome-legend .dl-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--dim-starlight);
+  }
+
+  .dome-legend .dl-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Control panel ---- */
+  .panel {
+    background: var(--parchment);
+    color: var(--ink);
+    border: 1px solid var(--brass);
+    border-radius: var(--radius-md);
+    padding: 22px;
+  }
+
+  .panel h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 19px;
+    margin: 0 0 18px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    color: #5A4E3A;
+    margin-bottom: 5px;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid #C9BB94;
+    background: #FBF7EC;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+  }
+
+  .field input:focus,
+  .field select:focus {
+    outline: 2px solid var(--brass);
+    outline-offset: 1px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .location-match {
+    font-size: 11.5px;
+    color: #6A5D45;
+    margin-top: 5px;
+    min-height: 14px;
+    line-height: 1.4;
+  }
+
+  .history-note {
+    font-size: 11.5px;
+    color: #6A5D45;
+    margin-top: 6px;
+    line-height: 1.4;
+    min-height: 0;
+  }
+
+  .nudge-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .nudge {
+    padding: 6px 4px;
+    background: #FBF7EC;
+    border: 1px solid #C9BB94;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .nudge:hover { background: #F0E8D2; }
+  .nudge:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+
+  .link-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0 0 14px;
+    color: #6A5D45;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .link-btn:hover { color: var(--ink); }
+  .link-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+
+  button.travel {
+    width: 100%;
+    margin-top: 6px;
+    padding: 11px 14px;
+    background: var(--ink);
+    color: var(--parchment);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  button.travel:hover { background: #443A28; }
+  button.travel:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  button.travel:disabled { opacity: 0.6; cursor: default; }
+
+  .status-line {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: #6A5D45;
+    min-height: 16px;
+  }
+
+  /* ---- Sky map hero ---- */
+  .skymap-card {
+    background: var(--navy-panel);
+    border: 1px solid var(--brass);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .skymap-card img {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .skymap-card img.loaded {
+    opacity: 1;
+  }
+
+  .skymap-placeholder {
+    color: var(--dim-starlight);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .error-banner {
+    background: rgba(201, 106, 75, 0.15);
+    border: 1px solid var(--danger);
+    color: #F0C9BB;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13.5px;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  .error-banner.show { display: block; }
+
+  /* ---- Sections ---- */
+  section.data {
+    margin-top: 36px;
+  }
+
+  section.data .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  section.data h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+    margin: 0;
+    color: var(--starlight);
+  }
+
+  section.data .section-note {
+    font-size: 12px;
+    color: var(--dim-starlight);
+  }
+
+  /* Named stars — pill badges */
+  .star-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .star-pill {
+    background: var(--navy-panel);
+    border: 1px solid var(--brass);
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .star-pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--brass-bright);
+    flex-shrink: 0;
+  }
+
+  .star-pill.below .dot { background: #4B5468; }
+  .star-pill.below { color: var(--dim-starlight); border-color: #35405C; }
+
+  .star-pill .name {
+    font-weight: 500;
+    color: var(--starlight);
+  }
+
+  .star-pill.below .name { color: var(--dim-starlight); }
+
+  .star-pill .detail {
+    color: var(--dim-starlight);
+    font-size: 12px;
+  }
+
+  /* Planet cards — rectangular, deliberately different from pills */
+  .planet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .planet-card {
+    background: var(--navy-panel);
+    border-left: 3px solid var(--brass);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+
+  .planet-card.below {
+    border-left-color: #4B5468;
+    opacity: 0.55;
+  }
+
+  .planet-card .p-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+
+  .planet-card .p-row {
+    font-size: 12.5px;
+    color: var(--dim-starlight);
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+  }
+
+  .planet-card .p-row span:last-child {
+    color: var(--starlight);
+  }
+
+  .planet-card.below .p-row span:last-child {
+    color: var(--dim-starlight);
+  }
+
+  .below-note {
+    font-size: 11px;
+    color: var(--dim-starlight);
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  /* ---- Loading states ---- */
+  .spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(201, 151, 75, 0.25);
+    border-top-color: var(--brass);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .skeleton-card {
+    background: linear-gradient(90deg, #172036 25%, #1d2745 37%, #172036 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: var(--radius-sm);
+    height: 92px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+
+  /* ---- Card entrance polish ---- */
+  .planet-card, .exo-card, .dsn-card, .moon-card,
+  .pass-card, .star-pill, .spotlight-card {
+    animation: cardFadeIn 0.4s ease;
+  }
+
+  @keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .moon-phase-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .moon-phase-row canvas {
+    flex-shrink: 0;
+  }
+
+  .moon-phase-name {
+    font-size: 12px;
+    color: var(--starlight);
+  }
+
+  .moon-phase-pct {
+    font-size: 11px;
+    color: var(--dim-starlight);
+  }
+
+  /* ---- Orbit hologram ---- */
+  .hologram-card {
+    background: var(--navy-panel);
+    border: 1px solid var(--cyan);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hologram-card canvas {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* ---- Directly imaged spotlight (real photos) ---- */
+  .spotlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .spotlight-card {
+    background: var(--navy-panel);
+    border: 1px solid var(--brass);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .spotlight-card img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    display: block;
+    background: #060A14;
+  }
+
+  .spotlight-body {
+    padding: 12px 14px 14px;
+  }
+
+  .spotlight-body .sp-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .spotlight-body .sp-note {
+    font-size: 12px;
+    color: var(--dim-starlight);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .spotlight-body .sp-credit {
+    font-size: 10.5px;
+    color: #5F6C88;
+    font-style: italic;
+  }
+
+  /* ---- Exoplanet gallery ---- */
+  .exo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .exo-card {
+    background: var(--navy-panel);
+    border: 1px solid #2C3A57;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .exo-icon-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .exo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .exo-icon-label {
+    font-size: 9.5px;
+    color: #5F6C88;
+    font-style: italic;
+  }
+
+  /* ---- ISS passes ---- */
+  .pass-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .pass-card {
+    background: var(--navy-panel);
+    border: 1px solid var(--cyan);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pass-card .pass-date {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+  }
+
+  .pass-card .pass-detail {
+    font-size: 12px;
+    color: var(--dim-starlight);
+  }
+
+  /* ---- Deep Space Network ---- */
+  .dsn-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .dsn-card {
+    background: var(--navy-panel);
+    border-left: 3px solid var(--cyan);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+
+  .dsn-card .dsn-name {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+
+  .dsn-card .dsn-station {
+    font-size: 11.5px;
+    color: var(--dim-starlight);
+    margin-bottom: 8px;
+  }
+
+  /* ---- Fact cards (Earth twin, zodiac) ---- */
+  .fact-card {
+    background: var(--navy-panel);
+    border: 1px solid var(--brass);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    margin-bottom: 8px;
+  }
+
+  .fact-card .fact-headline {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    color: var(--brass-bright);
+    margin-bottom: 8px;
+  }
+
+  .fact-card .fact-body {
+    font-size: 13.5px;
+    color: var(--dim-starlight);
+    line-height: 1.6;
+  }
+
+  .fact-card .fact-body strong {
+    color: var(--starlight);
+    font-weight: 500;
+  }
+
+  .zodiac-compare {
+    display: flex;
+    gap: 20px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .zodiac-compare .zc-item {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .zodiac-compare .zc-label {
+    font-size: 11px;
+    color: #5F6C88;
+    text-transform: none;
+    margin-bottom: 3px;
+  }
+
+  .zodiac-compare .zc-value {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--starlight);
+  }
+
+  /* ---- Starlight age list ---- */
+  .pass-card .pass-detail strong {
+    color: var(--starlight);
+  }
+
+  /* ---- Moons ---- */
+  .moon-planet-group {
+    margin-bottom: 28px;
+  }
+
+  .moon-planet-group h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    color: var(--brass-bright);
+    margin: 0 0 12px;
+  }
+
+  .moon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .moon-card {
+    background: var(--navy-panel);
+    border-left: 3px solid var(--cyan);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+
+  .moon-card .moon-name {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+
+  .moon-card .moon-fact {
+    font-size: 12px;
+    color: var(--dim-starlight);
+    line-height: 1.5;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  .exo-card .exo-year {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    font-size: 11px;
+    color: var(--cyan);
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+
+  .exo-card .exo-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    margin-bottom: 2px;
+    padding-right: 40px;
+  }
+
+  .exo-card .exo-host {
+    font-size: 11.5px;
+    color: var(--dim-starlight);
+    margin-bottom: 10px;
+  }
+
+  .exo-card .p-row {
+    font-size: 12.5px;
+    color: var(--dim-starlight);
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+  }
+
+  .exo-card .p-row span:last-child {
+    color: var(--starlight);
+  }
+
+  /* ---- Footer ---- */
+  .site-footer {
+    margin-top: 56px;
+    padding-top: 22px;
+    border-top: 1px solid #2C3A57;
+  }
+
+  .footer-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .footer-cols h4 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--brass-bright);
+    margin: 0 0 6px;
+  }
+
+  .footer-cols p {
+    font-size: 11.5px;
+    color: var(--dim-starlight);
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .footer-note {
+    font-size: 10.5px;
+    color: #5F6C88;
+    line-height: 1.5;
+  }
+
+  /* ---- Mobile responsiveness ---- */
+  @media (max-width: 600px) {
+    .page {
+      padding: 24px 14px 60px;
+    }
+
+    .wordmark {
+      font-size: 24px;
+    }
+
+    .tagline {
+      font-size: 12px;
+    }
+
+    .tab-btn {
+      font-size: 12px;
+      padding: 7px 13px;
+    }
+
+    #skyDomeContainer {
+      height: 360px;
+    }
+
+    .hologram-card canvas {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .footer-cols {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---- Cosmic Identity Card ---- */
+  #identityCardWrap {
+    display: flex;
+    justify-content: center;
+  }
+
+  .identity-card {
+    width: 100%;
+    max-width: 640px;
+    background: linear-gradient(160deg, #172036 0%, #0E1526 100%);
+    border: 1.5px solid var(--brass);
+    border-radius: 10px;
+    padding: 26px 28px;
+    box-shadow: 0 0 40px rgba(201, 151, 75, 0.12);
+  }
+
+  .identity-header {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(201, 151, 75, 0.35);
+  }
+
+  .identity-header .id-word {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 20px;
+    color: var(--brass-bright);
+  }
+
+  .identity-header .id-moment {
+    font-size: 12px;
+    color: var(--dim-starlight);
+    margin-top: 4px;
+  }
+
+  .identity-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 520px) {
+    .identity-body { grid-template-columns: 1fr; }
+  }
+
+  .identity-body img {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid rgba(201, 151, 75, 0.3);
+  }
+
+  .id-item {
+    margin-bottom: 12px;
+  }
+
+  .id-item .id-label {
+    font-size: 10.5px;
+    color: #5F6C88;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+  }
+
+  .id-item .id-value {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    color: var(--starlight);
+  }
+
+  .id-moon-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .identity-footer {
+    text-align: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(201, 151, 75, 0.35);
+    font-size: 10px;
+    color: #5F6C88;
+  }
+
+  #identityDownloadBtn {
+    display: block;
+    margin: 14px auto 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="top">
+    <div class="brand">
+      <div class="wordmark">ChronoSky</div>
+      <div class="tagline">Travel to any moment in history and see the real sky, live spacecraft, and worlds beyond our own — powered by NASA and JPL data.</div>
+    </div>
+  </header>
+
+  <nav class="tab-bar" id="tabBar">
+    <button type="button" class="tab-btn active" data-mode="skymap">Sky Map</button>
+    <button type="button" class="tab-btn" data-mode="dome">3D Sky Dome</button>
+    <button type="button" class="tab-btn" data-mode="hologram">Hologram</button>
+    <button type="button" class="tab-btn" data-mode="iss">ISS Tracker</button>
+    <button type="button" class="tab-btn" data-mode="eclipses">Eclipses</button>
+    <button type="button" class="tab-btn" data-mode="panchang">Panchang</button>
+    <button type="button" class="tab-btn" data-mode="spaceweather">Space Weather</button>
+    <button type="button" class="tab-btn" data-mode="dsn">Deep Space Network</button>
+    <button type="button" class="tab-btn" data-mode="exoplanets">Exoplanets</button>
+    <button type="button" class="tab-btn" data-mode="skyfacts">Sky Facts</button>
+    <button type="button" class="tab-btn" data-mode="identity">Cosmic Identity Card</button>
+    <button type="button" class="tab-btn" data-mode="moons">Moons</button>
+  </nav>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="layout">
+
+    <div class="panel">
+      <h2>Travel to a moment</h2>
+
+      <div class="field">
+        <label for="dateInput">Date</label>
+        <input type="date" id="dateInput" value="1969-07-20" />
+        <div class="history-note" id="historyNote"></div>
+      </div>
+
+      <div class="field">
+        <label for="timeInput">Time</label>
+        <input type="time" id="timeInput" value="20:17" />
+      </div>
+
+      <div class="nudge-row">
+        <button type="button" class="nudge" data-amount="1" data-unit="hour">+1 hr</button>
+        <button type="button" class="nudge" data-amount="1" data-unit="day">+1 day</button>
+        <button type="button" class="nudge" data-amount="1" data-unit="year">+1 yr</button>
+      </div>
+
+      <div class="field">
+        <label for="timezoneSelect">Time zone (for the time above)</label>
+        <select id="timezoneSelect"></select>
+      </div>
+
+      <button type="button" class="link-btn" id="nowBtn">Use current moment</button>
+
+      <div class="field">
+        <label for="locationInput">Location</label>
+        <input type="text" id="locationInput" value="Dammam, Saudi Arabia" placeholder="City, country, or landmark" />
+        <div class="location-match" id="locationMatch"></div>
+      </div>
+
+      <button type="button" class="link-btn" id="myLocationBtn">Use my location</button>
+
+      <button class="travel" id="travelBtn">Travel here</button>
+      <button type="button" class="link-btn" id="speakBtn" style="padding-top:4px;">🔊 Read the sky aloud</button>
+      <div class="status-line" id="statusLine"></div>
+    </div>
+
+    <div id="modeStage">
+
+      <div class="mode-block" data-mode="skymap">
+        <div class="skymap-card">
+          <div class="skymap-placeholder" id="skymapPlaceholder"><span class="spinner"></span>Charting the sky…</div>
+          <img id="skymapImg" alt="Sky map for the selected date, time, and location" crossorigin="anonymous" />
+        </div>
+      </div>
+
+      <div class="mode-block" data-mode="dome">
+        <div class="section-head">
+          <h2>3D Sky Dome</h2>
+          <div class="section-note">Real star and planet positions — click and drag to look around</div>
+        </div>
+        <div class="dome-card">
+          <div id="skyDomeContainer"></div>
+          <div class="dome-hint">Drag to look around · Scroll to zoom</div>
+        </div>
+        <div class="dome-legend" id="domeLegend"></div>
+      </div>
+
+      <div class="mode-block" data-mode="hologram">
+        <div class="section-head">
+          <h2>Solar system hologram</h2>
+          <div class="section-note">Real planetary positions for the selected moment</div>
+        </div>
+        <div class="hologram-card">
+          <canvas id="hologramCanvas" width="560" height="560"></canvas>
+        </div>
+      </div>
+
+      <div class="mode-block" data-mode="iss">
+        <div class="section-head">
+          <h2>Is a satellite visible from here?</h2>
+          <div class="section-note">Real upcoming passes, live tracking data</div>
+        </div>
+        <div class="field" style="max-width:260px;">
+          <label for="satelliteSelect">Satellite</label>
+          <select id="satelliteSelect">
+            <option value="iss">International Space Station</option>
+            <option value="hubble">Hubble Space Telescope</option>
+            <option value="tiangong">Tiangong Space Station</option>
+          </select>
+        </div>
+        <button type="button" class="link-btn" id="issCheckBtn" style="padding-bottom:10px;">Check passes for my location</button>
+        <div class="pass-list" id="issPassList"></div>
+      </div>
+
+      <div class="mode-block" data-mode="eclipses">
+        <div class="section-head">
+          <h2>Upcoming eclipses</h2>
+          <div class="section-note">Real geometry for lunar eclipses · approximate for solar</div>
+        </div>
+        <button type="button" class="link-btn" id="eclipseCheckBtn" style="padding-bottom:10px;">Check eclipses for my location</button>
+        <h3 style="font-family:'Fraunces',serif;font-size:15px;margin:14px 0 8px;color:var(--starlight);">Lunar eclipses</h3>
+        <div class="pass-list" id="lunarEclipseList"></div>
+        <h3 style="font-family:'Fraunces',serif;font-size:15px;margin:18px 0 8px;color:var(--starlight);">Solar eclipses (approximate)</h3>
+        <div class="pass-list" id="solarEclipseList"></div>
+      </div>
+
+      <div class="mode-block" data-mode="panchang">
+        <div class="section-head">
+          <h2>Panchang</h2>
+          <div class="section-note">The five limbs of the Hindu daily almanac, for your chosen moment</div>
+        </div>
+        <div id="panchangCard"></div>
+      </div>
+
+      <div class="mode-block" data-mode="spaceweather">
+        <div class="section-head">
+          <h2>Live space weather</h2>
+          <div class="section-note">Real-time from NOAA's Space Weather Prediction Center</div>
+        </div>
+        <div class="dsn-grid" id="spaceWeatherGrid"></div>
+      </div>
+
+      <div class="mode-block" data-mode="dsn">
+        <div class="section-head">
+          <h2>NASA Deep Space Network — live now</h2>
+          <div class="section-note">Real spacecraft, real signal data, updated live</div>
+        </div>
+        <div class="dsn-grid" id="dsnGrid"></div>
+      </div>
+
+      <div class="mode-block" data-mode="exoplanets">
+        <div class="section-head">
+          <h2>Cosmic Earth twin</h2>
+          <div class="section-note">The closest known match to Earth, ranked live from real data</div>
+        </div>
+        <div id="earthTwinCard"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>Directly imaged worlds</h2>
+          <div class="section-note">Real telescope photographs — a rare few</div>
+        </div>
+        <div class="spotlight-grid" id="spotlightGrid"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>Newly discovered worlds</h2>
+          <div class="section-note">Live from NASA's Exoplanet Archive · icons are illustrations, not photos</div>
+        </div>
+        <div class="exo-grid" id="exoGrid"></div>
+      </div>
+
+      <div class="mode-block" data-mode="skyfacts">
+        <div class="section-head">
+          <h2>Is tonight worth going outside?</h2>
+          <div class="section-note">Real live cloud cover + tonight's real moon brightness</div>
+        </div>
+        <button type="button" class="link-btn" id="tonightCheckBtn" style="padding-bottom:10px;">Check tonight for my location</button>
+        <div id="tonightCard"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>Vedic Lagna &amp; Nakshatra</h2>
+          <div class="section-note">Real sidereal astronomy — Lahiri ayanamsha</div>
+        </div>
+        <div id="lagnaCard"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>Your zodiac, astronomically</h2>
+          <div class="section-note">Where the Sun really was on your chosen date</div>
+        </div>
+        <div id="zodiacCard"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>The starlight you're seeing</h2>
+          <div class="section-note">When it actually left, relative to your chosen date</div>
+        </div>
+        <div class="pass-list" id="starlightAgeList"></div>
+      </div>
+
+      <div class="mode-block" data-mode="identity">
+        <div class="section-head">
+          <h2>Cosmic Identity Card</h2>
+          <div class="section-note">Everything ChronoSky knows about your chosen moment, in one card</div>
+        </div>
+        <button type="button" class="link-btn" id="generateIdentityBtn" style="padding-bottom:10px;">Generate my Cosmic Identity Card</button>
+        <div id="identityCardWrap"></div>
+      </div>
+
+      <div class="mode-block" data-mode="moons">
+        <div class="section-head">
+          <h2>Moons of the solar system</h2>
+          <div class="section-note">A curated selection of the most notable moons per planet</div>
+        </div>
+        <div id="moonsContainer"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="mode-block" data-mode="skymap">
+    <section class="data">
+      <div class="section-head">
+        <h2>Visible named stars</h2>
+      </div>
+      <div class="star-row" id="starRow"></div>
+    </section>
+
+    <section class="data">
+      <div class="section-head">
+        <h2>Planets &amp; solar system</h2>
+      </div>
+      <div class="planet-grid" id="planetGrid"></div>
+    </section>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-cols">
+      <div>
+        <h4>Data &amp; science</h4>
+        <p>JPL DE440s planetary ephemeris · Hipparcos star catalogue · Skyfield</p>
+      </div>
+      <div>
+        <h4>Live feeds</h4>
+        <p>NASA Exoplanet Archive · NASA JPL Deep Space Network · Celestrak satellite tracking</p>
+      </div>
+      <div>
+        <h4>Imagery</h4>
+        <p>NASA, ESA, CSA, STScI · ESO</p>
+      </div>
+    </div>
+    <div class="footer-note">Built with FastAPI, Skyfield, and Three.js. ChronoSky is an independent project and is not affiliated with or endorsed by NASA or ESA.</div>
+  </footer>
+
+</div>
+
+<script>
+  // When this page is served BY the backend (locally via
+  // http://127.0.0.1:8000/, or once deployed), API calls can just be
+  // relative - same origin, no CORS needed. Only falls back to the
+  // hardcoded local address if the page was opened directly as a
+  // file (double-clicked index.html) rather than served by uvicorn.
+  const API_BASE = (window.location.protocol === 'file:')
+    ? 'http://127.0.0.1:8000'
+    : '';
+
+  const dateInput = document.getElementById('dateInput');
+  const timeInput = document.getElementById('timeInput');
+  const timezoneSelect = document.getElementById('timezoneSelect');
+  const locationInput = document.getElementById('locationInput');
+  const locationMatch = document.getElementById('locationMatch');
+  const historyNote = document.getElementById('historyNote');
+  const nowBtn = document.getElementById('nowBtn');
+  const myLocationBtn = document.getElementById('myLocationBtn');
+  const travelBtn = document.getElementById('travelBtn');
+  const statusLine = document.getElementById('statusLine');
+  const errorBanner = document.getElementById('errorBanner');
+  const skymapImg = document.getElementById('skymapImg');
+  const skymapPlaceholder = document.getElementById('skymapPlaceholder');
+  const starRow = document.getElementById('starRow');
+  const planetGrid = document.getElementById('planetGrid');
+  const exoGrid = document.getElementById('exoGrid');
+  const hologramCanvas = document.getElementById('hologramCanvas');
+  const issCheckBtn = document.getElementById('issCheckBtn');
+  const satelliteSelect = document.getElementById('satelliteSelect');
+  const eclipseCheckBtn = document.getElementById('eclipseCheckBtn');
+  const lunarEclipseList = document.getElementById('lunarEclipseList');
+  const solarEclipseList = document.getElementById('solarEclipseList');
+  const panchangCard = document.getElementById('panchangCard');
+  const spaceWeatherGrid = document.getElementById('spaceWeatherGrid');
+  const issPassList = document.getElementById('issPassList');
+  const dsnGrid = document.getElementById('dsnGrid');
+  const earthTwinCard = document.getElementById('earthTwinCard');
+  const zodiacCard = document.getElementById('zodiacCard');
+  const lagnaCard = document.getElementById('lagnaCard');
+  const tonightCheckBtn = document.getElementById('tonightCheckBtn');
+  const tonightCard = document.getElementById('tonightCard');
+  const generateIdentityBtn = document.getElementById('generateIdentityBtn');
+  const identityCardWrap = document.getElementById('identityCardWrap');
+  const speakBtn = document.getElementById('speakBtn');
+  const starlightAgeList = document.getElementById('starlightAgeList');
+  const moonsContainer = document.getElementById('moonsContainer');
+  const skyDomeContainer = document.getElementById('skyDomeContainer');
+  const domeLegend = document.getElementById('domeLegend');
+
+  function setMode(mode) {
+    document.querySelectorAll('.mode-block').forEach((el) => {
+      el.classList.toggle('active', el.dataset.mode === mode);
+    });
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    if (mode === 'dome') {
+      if (!domeInitialized) {
+        initSkyDome();
+        domeInitialized = true;
+      }
+      if (latestVisibleStars) {
+        updateSkyDome(latestVisibleStars, latestNamedStars, latestPlanetsData);
+      }
+    }
+  }
+
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  });
+
+  // Remembers the last successfully resolved location, so we don't
+  // re-geocode on every click if the text box hasn't changed.
+  let resolvedLocation = { query: null, lat: 26.4207, lon: 50.0888, label: 'Dammam, Saudi Arabia' };
+
+  // ---- On this day in space history ----
+  // Keyed by "MM-DD" (year-independent) - a small, hand-picked list.
+  const SPACE_HISTORY = {
+    '01-28': { year: 1986, text: "the Space Shuttle Challenger was lost 73 seconds after launch." },
+    '02-01': { year: 2003, text: 'the Space Shuttle Columbia broke apart on re-entry.' },
+    '02-18': { year: 2021, text: "NASA's Perseverance rover landed on Mars." },
+    '04-12': { year: 1961, text: 'Yuri Gagarin became the first human in space.' },
+    '04-24': { year: 1990, text: 'the Hubble Space Telescope was launched.' },
+    '07-01': { year: 2004, text: 'the Cassini spacecraft entered orbit around Saturn.' },
+    '07-14': { year: 2015, text: "NASA's New Horizons made its historic flyby of Pluto." },
+    '07-20': { year: 1969, text: 'Apollo 11 became the first crewed Moon landing.' },
+    '08-06': { year: 2012, text: "NASA's Curiosity rover landed on Mars." },
+    '08-20': { year: 1977, text: 'Voyager 2 was launched on its grand tour of the outer planets.' },
+    '09-05': { year: 1977, text: 'Voyager 1 was launched, later becoming the most distant human-made object.' },
+    '10-04': { year: 1957, text: 'Sputnik 1 became the first artificial satellite in orbit.' },
+    '11-20': { year: 1998, text: 'Zarya, the first module of the International Space Station, was launched.' },
+    '12-25': { year: 2021, text: 'the James Webb Space Telescope was launched.' },
+  };
+
+  function updateHistoryNote() {
+    const monthDay = dateInput.value.slice(5); // "MM-DD"
+    const entry = SPACE_HISTORY[monthDay];
+    historyNote.textContent = entry
+      ? `On this day in ${entry.year}, ${entry.text}`
+      : '';
+  }
+
+  // ---- Quick time-jump buttons ----
+  function nudgeTime(amount, unit) {
+    const [y, m, d] = dateInput.value.split('-').map(Number);
+    const [h, mi] = timeInput.value.split(':').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d, h, mi));
+
+    if (unit === 'hour') dt.setUTCHours(dt.getUTCHours() + amount);
+    if (unit === 'day') dt.setUTCDate(dt.getUTCDate() + amount);
+    if (unit === 'year') dt.setUTCFullYear(dt.getUTCFullYear() + amount);
+
+    dateInput.value = dt.toISOString().slice(0, 10);
+    timeInput.value = dt.toISOString().slice(11, 16);
+    updateHistoryNote();
+    travel();
+  }
+
+  document.querySelectorAll('.nudge').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      nudgeTime(parseInt(btn.dataset.amount, 10), btn.dataset.unit);
+    });
+  });
+
+  dateInput.addEventListener('input', updateHistoryNote);
+
+  // ---- "Use current moment" ----
+  nowBtn.addEventListener('click', () => {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    dateInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    timeInput.value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    timezoneSelect.value = detectTimezone();
+    updateHistoryNote();
+    travel();
+  });
+
+  // ---- "Use my location" ----
+  myLocationBtn.addEventListener('click', () => {
+    if (!navigator.geolocation) {
+      showError('Your browser does not support location detection.');
+      return;
+    }
+    locationMatch.textContent = 'Finding your location…';
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          const label = data.display_name || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+          locationInput.value = label;
+          resolvedLocation = { query: label.trim(), lat: latitude, lon: longitude, label };
+          locationMatch.textContent = `Matched: ${label}`;
+        } catch (err) {
+          locationInput.value = `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+          resolvedLocation = { query: locationInput.value, lat: latitude, lon: longitude, label: locationInput.value };
+          locationMatch.textContent = '';
+        }
+        travel();
+      },
+      () => {
+        showError("Couldn't get your location - check your browser's location permission for this page.");
+        locationMatch.textContent = '';
+      }
+    );
+  });
+
+  function getLocalDateTimeInput() {
+    const [year, month, day] = dateInput.value.split('-').map(Number);
+    const [hour, minute] = timeInput.value.split(':').map(Number);
+    return { year, month, day, hour, minute };
+  }
+
+  // ---- Time zone handling ----
+  // Location (lat/lon) decides what's visible in the sky. Time zone
+  // decides how to *read the clock* someone typed - these are
+  // independent (e.g. an Indian expat in Dammam wants Dammam's sky,
+  // but to enter the time in IST). We convert whatever wall-clock
+  // time + zone was chosen into true UTC before calling the API,
+  // which is the only thing the backend needs.
+
+  const FALLBACK_TIMEZONES = [
+    'UTC', 'Asia/Kolkata', 'Asia/Riyadh', 'Asia/Dubai', 'Asia/Karachi',
+    'Asia/Dhaka', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Singapore',
+    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
+    'Africa/Cairo', 'Africa/Johannesburg', 'America/New_York',
+    'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    'America/Sao_Paulo', 'Australia/Sydney', 'Pacific/Auckland',
+  ];
+
+  function detectTimezone() {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch (err) {
+      return 'UTC';
+    }
+  }
+
+  function populateTimezones() {
+    const detected = detectTimezone();
+    let zones;
+    try {
+      zones = typeof Intl.supportedValuesOf === 'function'
+        ? Intl.supportedValuesOf('timeZone')
+        : FALLBACK_TIMEZONES;
+    } catch (err) {
+      zones = FALLBACK_TIMEZONES;
+    }
+
+    timezoneSelect.innerHTML = '';
+
+    const detectedOpt = document.createElement('option');
+    detectedOpt.value = detected;
+    detectedOpt.textContent = `${detected} (your device)`;
+    timezoneSelect.appendChild(detectedOpt);
+
+    for (const zone of zones) {
+      if (zone === detected) continue;
+      const opt = document.createElement('option');
+      opt.value = zone;
+      opt.textContent = zone;
+      timezoneSelect.appendChild(opt);
+    }
+
+    timezoneSelect.value = detected;
+  }
+
+  // How far ahead of UTC (in minutes) a named zone is, at a given instant.
+  function getZoneOffsetMinutes(utcMs, timeZone) {
+    const dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const parts = dtf.formatToParts(new Date(utcMs)).reduce((acc, p) => {
+      acc[p.type] = p.value;
+      return acc;
+    }, {});
+    const asUTC = Date.UTC(
+      parseInt(parts.year), parseInt(parts.month) - 1, parseInt(parts.day),
+      parseInt(parts.hour), parseInt(parts.minute), parseInt(parts.second)
+    );
+    return (asUTC - utcMs) / 60000;
+  }
+
+  // Converts a wall-clock date/time meant as "this time, in this zone"
+  // into the true UTC instant it refers to.
+  function localWallTimeToUTC(year, month, day, hour, minute, timeZone) {
+    let guessMs = Date.UTC(year, month - 1, day, hour, minute);
+    for (let i = 0; i < 2; i++) {
+      const offsetMin = getZoneOffsetMinutes(guessMs, timeZone);
+      guessMs = Date.UTC(year, month - 1, day, hour, minute) - offsetMin * 60000;
+    }
+    const d = new Date(guessMs);
+    return {
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+      day: d.getUTCDate(),
+      hour: d.getUTCHours(),
+      minute: d.getUTCMinutes(),
+    };
+  }
+
+  function qs(params) {
+    return new URLSearchParams(params).toString();
+  }
+
+  function showError(message) {
+    errorBanner.textContent = message;
+    errorBanner.classList.add('show');
+  }
+
+  function clearError() {
+    errorBanner.classList.remove('show');
+    errorBanner.textContent = '';
+  }
+
+  async function fetchJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url} returned ${res.status}`);
+    return res.json();
+  }
+
+  function renderSkeleton(container, count = 4) {
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'skeleton-card';
+      container.appendChild(el);
+    }
+  }
+
+  // ---- Location search (OpenStreetMap Nominatim - free, no API key) ----
+  async function resolveLocation(query) {
+    if (query.trim() === resolvedLocation.query) {
+      return resolvedLocation;
+    }
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Location search failed');
+    const results = await res.json();
+    if (results.length === 0) {
+      throw new Error('LOCATION_NOT_FOUND');
+    }
+    resolvedLocation = {
+      query: query.trim(),
+      lat: parseFloat(results[0].lat),
+      lon: parseFloat(results[0].lon),
+      label: results[0].display_name,
+    };
+    return resolvedLocation;
+  }
+
+  // ---- Renderers ----
+  function renderStars(namedStars) {
+    starRow.innerHTML = '';
+    const entries = Object.entries(namedStars).sort(
+      (a, b) => b[1].altitude - a[1].altitude
+    );
+
+    if (entries.length === 0) {
+      starRow.innerHTML = '<span class="status-line" style="color:var(--dim-starlight)">No named star data returned.</span>';
+      return;
+    }
+
+    for (const [name, data] of entries) {
+      const below = data.altitude < 0;
+      const pill = document.createElement('div');
+      pill.className = 'star-pill' + (below ? ' below' : '');
+      pill.innerHTML = `
+        <span class="dot"></span>
+        <span class="name">${name}</span>
+        <span class="detail">${below ? 'below horizon' : `${data.altitude.toFixed(0)}° alt · ${data.azimuth.toFixed(0)}° az`}</span>
+      `;
+      starRow.appendChild(pill);
+    }
+  }
+
+  function moonPhaseName(phaseDeg) {
+    const d = ((phaseDeg % 360) + 360) % 360;
+    if (d < 22.5 || d >= 337.5) return 'New Moon';
+    if (d < 67.5) return 'Waxing Crescent';
+    if (d < 112.5) return 'First Quarter';
+    if (d < 157.5) return 'Waxing Gibbous';
+    if (d < 202.5) return 'Full Moon';
+    if (d < 247.5) return 'Waning Gibbous';
+    if (d < 292.5) return 'Last Quarter';
+    return 'Waning Crescent';
+  }
+
+  // Simple two-circle overlay technique: a lit disc with a same-sized
+  // "shadow" disc slid across it. Not astronomically exact geometry,
+  // but a clean, reliable way to depict crescent/gibbous shapes.
+  function drawMoonIcon(canvas, phaseDeg, illumination) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.min(w, h) / 2 - 2;
+
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Lit base disc
+    ctx.fillStyle = '#F2EFE6';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shadow disc slides across the lit disc based on illumination.
+    const waxing = phaseDeg < 180;
+    const f = Math.max(0, Math.min(1, illumination));
+    const shadowCx = waxing ? cx - 2 * r * f : cx + 2 * r * f;
+
+    ctx.fillStyle = '#1B2440';
+    ctx.beginPath();
+    ctx.arc(shadowCx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(201, 151, 75, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function renderPlanets(planets) {
+    planetGrid.innerHTML = '';
+    const entries = Object.entries(planets)
+      .filter(([name]) => name !== 'Earth')
+      .sort((a, b) => (b[1].altitude_deg ?? -999) - (a[1].altitude_deg ?? -999));
+
+    for (const [name, data] of entries) {
+      const below = data.altitude_deg < 0;
+      const card = document.createElement('div');
+      card.className = 'planet-card' + (below ? ' below' : '');
+
+      const isMoon = name === 'Moon' && typeof data.phase_deg === 'number';
+      const moonBlock = isMoon
+        ? `<div class="moon-phase-row">
+             <canvas width="36" height="36"></canvas>
+             <div>
+               <div class="moon-phase-name">${moonPhaseName(data.phase_deg)}</div>
+               <div class="moon-phase-pct">${Math.round(data.illumination_fraction * 100)}% illuminated</div>
+             </div>
+           </div>`
+        : '';
+
+      card.innerHTML = `
+        <div class="p-name">${name}</div>
+        ${moonBlock}
+        <div class="p-row"><span>Altitude</span><span>${data.altitude_deg.toFixed(1)}°</span></div>
+        <div class="p-row"><span>Azimuth</span><span>${data.azimuth_deg.toFixed(1)}°</span></div>
+        <div class="p-row"><span>Distance</span><span>${data.distance_au.toFixed(3)} AU</span></div>
+        <div class="p-row"><span>Constellation</span><span>${data.constellation ?? '—'}</span></div>
+        ${below ? '<div class="below-note">Below the horizon right now</div>' : ''}
+      `;
+      planetGrid.appendChild(card);
+
+      if (isMoon) {
+        const canvas = card.querySelector('canvas');
+        drawMoonIcon(canvas, data.phase_deg, data.illumination_fraction);
+      }
+    }
+  }
+
+  // A handful of exoplanet systems that genuinely have real telescope
+  // photographs (direct imaging) - as opposed to the vast majority of
+  // confirmed exoplanets below, which are found indirectly and have
+  // no photo to show. Real NASA-hosted images, credited.
+  const DIRECTLY_IMAGED_SPOTLIGHT = [
+    {
+      name: 'HR 8799 (4 planets)',
+      note: "The first multi-planet system ever directly photographed. This 2025 James Webb image shows all four giant planets glowing in infrared, still hot from their own formation.",
+      image: 'https://assets.science.nasa.gov/dynamicimage/assets/science/missions/webb/science/2025/03/STScI-01JNH6R2GJGFNPBKD3Z4T0A8PB.png?w=700&h=700&fit=clip&crop=faces%2Cfocalpoint',
+      credit: 'NASA, ESA, CSA, STScI — Webb NIRCam, 2025',
+    },
+    {
+      name: '51 Eridani b',
+      note: 'A cool, young giant planet about 96 light-years away, orbiting at roughly Saturn\'s distance from its star. Imaged directly by James Webb.',
+      image: 'https://assets.science.nasa.gov/dynamicimage/assets/science/missions/webb/science/2025/03/STScI-01JNH8HVE0C7XF8VA1C1C2P16S.png?w=700&h=700&fit=clip&crop=faces%2Cfocalpoint',
+      credit: 'NASA, ESA, CSA, STScI — Webb NIRCam, 2025',
+    },
+    {
+      name: 'PDS 70 b & c',
+      note: 'A planet caught in the act of forming, still gathering material from the disk around its young star, 370 light-years away.',
+      image: 'https://assets.science.nasa.gov/dynamicimage/assets/science/missions/webb/science/2020/12/STScI-01EVSST158H826EK7GDS3DGBQD.png?w=700&h=594&fit=clip&crop=faces%2Cfocalpoint',
+      credit: 'ESO, André Müller (ESO) — VLT/SPHERE, 2018',
+    },
+  ];
+
+  function renderSpotlight() {
+    const spotlightGrid = document.getElementById('spotlightGrid');
+    spotlightGrid.innerHTML = '';
+    for (const item of DIRECTLY_IMAGED_SPOTLIGHT) {
+      const card = document.createElement('div');
+      card.className = 'spotlight-card';
+      card.innerHTML = `
+        <img src="${item.image}" alt="${item.name}" loading="lazy" />
+        <div class="spotlight-body">
+          <div class="sp-name">${item.name}</div>
+          <div class="sp-note">${item.note}</div>
+          <div class="sp-credit">${item.credit}</div>
+        </div>
+      `;
+      spotlightGrid.appendChild(card);
+    }
+  }
+
+  // Generates a small illustrative icon (not a photo) for a gallery
+  // planet: size reflects its real radius, color reflects its real
+  // equilibrium temperature (blue = cold, orange/red = hot).
+  function planetIconStyle(radiusEarths, eqTempKelvin) {
+    const size = Math.max(18, Math.min(40, 16 + Math.sqrt(radiusEarths || 1) * 10));
+    let color = '#8FA3C9'; // neutral default when temperature is unknown
+    if (typeof eqTempKelvin === 'number') {
+      if (eqTempKelvin < 200) color = '#6FA8E0';
+      else if (eqTempKelvin < 320) color = '#6FE3D9';
+      else if (eqTempKelvin < 600) color = '#E0C46C';
+      else if (eqTempKelvin < 1200) color = '#E0955C';
+      else color = '#E0684C';
+    }
+    return `width:${size}px;height:${size}px;background:radial-gradient(circle at 35% 30%, ${color}, ${color}CC 60%, #0E1526 100%);box-shadow:0 0 10px ${color}99;`;
+  }
+
+  function renderExoplanets(rows) {
+    exoGrid.innerHTML = '';
+
+    if (!rows || rows.length === 0) {
+      exoGrid.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">No data returned.</div>';
+      return;
+    }
+
+    for (const row of rows) {
+      const lightYears = row.sy_dist ? (row.sy_dist * 3.26156).toFixed(1) : null;
+      const card = document.createElement('div');
+      card.className = 'exo-card';
+      card.innerHTML = `
+        <div class="exo-year">${row.disc_year ?? '—'}</div>
+        <div class="exo-icon-row">
+          <div class="exo-icon" style="${planetIconStyle(row.pl_rade, row.pl_eqt)}"></div>
+          <div>
+            <div class="exo-name" style="padding-right:0">${row.pl_name}</div>
+            <div class="exo-icon-label">illustration, not a photo</div>
+          </div>
+        </div>
+        <div class="exo-host">orbits ${row.hostname}</div>
+        <div class="p-row"><span>Method</span><span>${row.discoverymethod ?? '—'}</span></div>
+        <div class="p-row"><span>Radius</span><span>${row.pl_rade ? row.pl_rade.toFixed(2) + ' × Earth' : '—'}</span></div>
+        <div class="p-row"><span>Mass</span><span>${row.pl_bmasse ? row.pl_bmasse.toFixed(2) + ' × Earth' : '—'}</span></div>
+        <div class="p-row"><span>Temp.</span><span>${row.pl_eqt ? row.pl_eqt + ' K' : '—'}</span></div>
+        <div class="p-row"><span>Distance</span><span>${lightYears ? lightYears + ' ly' : '—'}</span></div>
+      `;
+      exoGrid.appendChild(card);
+    }
+  }
+
+  // ---- Orbit hologram (canvas) ----
+  const ORBIT_ORDER = ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune'];
+  const ORBIT_COLORS = {
+    Mercury: '#B5A79A', Venus: '#E3C989', Earth: '#6FE3D9', Mars: '#D97757',
+    Jupiter: '#E0B36C', Saturn: '#C9974B', Uranus: '#9FD8E0', Neptune: '#7A93E8',
+  };
+
+  let latestOrbits = null;
+  let hologramAngle = 0;
+
+  function drawHologram() {
+    const ctx = hologramCanvas.getContext('2d');
+    const w = hologramCanvas.width;
+    const h = hologramCanvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const flatten = 0.42;
+    const scale = 42;
+    const baseOffset = 16;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Faint radar-style rotating sweep, purely decorative.
+    hologramAngle += 0.004;
+    const sweep = ctx.createConicGradient
+      ? ctx.createConicGradient(hologramAngle, cx, cy)
+      : null;
+    if (sweep) {
+      sweep.addColorStop(0, 'rgba(111, 227, 217, 0.10)');
+      sweep.addColorStop(0.05, 'rgba(111, 227, 217, 0.0)');
+      sweep.addColorStop(1, 'rgba(111, 227, 217, 0.0)');
+      ctx.fillStyle = sweep;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.min(w, h) / 2 - 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Sun
+    ctx.save();
+    ctx.shadowColor = '#E0B36C';
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = '#F2D9A8';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (!latestOrbits) {
+      requestAnimationFrame(drawHologram);
+      return;
+    }
+
+    for (const name of ORBIT_ORDER) {
+      const p = latestOrbits[name];
+      if (!p) continue;
+
+      const distance = Math.sqrt(p.x_au * p.x_au + p.y_au * p.y_au);
+      const angle = Math.atan2(p.y_au, p.x_au);
+      const rx = baseOffset + Math.sqrt(distance) * scale;
+      const ry = rx * flatten;
+
+      // Orbit ring
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(111, 227, 217, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      const px = cx + rx * Math.cos(angle);
+      const py = cy + ry * Math.sin(angle);
+
+      // Planet dot
+      ctx.save();
+      const color = ORBIT_COLORS[name] || '#F2F0E8';
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, name === 'Jupiter' || name === 'Saturn' ? 5.5 : 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Label
+      ctx.fillStyle = 'rgba(242, 240, 232, 0.65)';
+      ctx.font = '10px "IBM Plex Sans", sans-serif';
+      ctx.fillText(name, px + 7, py - 7);
+    }
+
+    requestAnimationFrame(drawHologram);
+  }
+
+  requestAnimationFrame(drawHologram);
+
+  // ---- Main travel action ----
+  async function travel() {
+    clearError();
+    travelBtn.disabled = true;
+    travelBtn.textContent = 'Travelling…';
+    statusLine.textContent = 'Resolving location…';
+    locationMatch.textContent = '';
+    skymapImg.classList.remove('loaded');
+    skymapPlaceholder.style.display = 'block';
+    skymapPlaceholder.innerHTML = '<span class="spinner"></span>Charting the sky…';
+
+    const localDt = getLocalDateTimeInput();
+    if (Object.values(localDt).some((v) => Number.isNaN(v))) {
+      showError('Fill in a valid date and time before travelling.');
+      travelBtn.disabled = false;
+      travelBtn.textContent = 'Travel here';
+      return;
+    }
+
+    const dt = localWallTimeToUTC(
+      localDt.year, localDt.month, localDt.day,
+      localDt.hour, localDt.minute,
+      timezoneSelect.value
+    );
+
+    let location;
+    try {
+      location = await resolveLocation(locationInput.value);
+    } catch (err) {
+      if (err.message === 'LOCATION_NOT_FOUND') {
+        showError("Couldn't find that location — try being more specific, e.g. \"Kyoto, Japan\".");
+      } else {
+        showError("Couldn't reach the location search service. Check your internet connection and try again.");
+      }
+      statusLine.textContent = '';
+      travelBtn.disabled = false;
+      travelBtn.textContent = 'Travel here';
+      return;
+    }
+
+    locationMatch.textContent = `Matched: ${location.label}`;
+    statusLine.textContent = 'Travelling…';
+
+    const params = { ...dt, latitude: location.lat, longitude: location.lon };
+    const panchangParams = {
+      ...params,
+      local_year: localDt.year, local_month: localDt.month, local_day: localDt.day,
+    };
+
+    try {
+      const [planets, namedStars, orbits, visibleStars, lagnaData, panchangData] = await Promise.all([
+        fetchJSON(`${API_BASE}/planets?${qs(params)}`),
+        fetchJSON(`${API_BASE}/stars/named?${qs(params)}`),
+        fetchJSON(`${API_BASE}/orbits?${qs(dt)}`),
+        fetchJSON(`${API_BASE}/stars/visible?${qs(params)}`),
+        fetchJSON(`${API_BASE}/lagna?${qs(params)}`),
+        fetchJSON(`${API_BASE}/panchang?${qs(panchangParams)}`),
+      ]);
+
+      renderPlanets(planets);
+      renderStars(namedStars);
+      latestOrbits = orbits;
+      renderLagna(lagnaData);
+      latestLagnaData = lagnaData;
+      renderPanchang(panchangData);
+      latestPanchangData = panchangData;
+
+      latestVisibleStars = visibleStars;
+      latestNamedStars = namedStars;
+      latestPlanetsData = planets;
+      if (domeInitialized) {
+        updateSkyDome(visibleStars, namedStars, planets);
+      }
+
+      if (planets.Sun && planets.Sun.constellation) {
+        renderZodiac(planets.Sun.constellation, localDt.month, localDt.day);
+      }
+      renderStarlightAges(namedStars, localDt.year);
+
+      const mapUrl = `${API_BASE}/skymap?${qs(params)}&_=${Date.now()}`;
+      skymapImg.onload = () => {
+        skymapPlaceholder.style.display = 'none';
+        skymapImg.classList.add('loaded');
+      };
+      skymapImg.src = mapUrl;
+
+      const utcLabel = `${String(dt.hour).padStart(2, '0')}:${String(dt.minute).padStart(2, '0')} UTC`;
+      statusLine.textContent = `Showing the sky for ${dateInput.value} ${timeInput.value} (${timezoneSelect.value}) — ${utcLabel}.`;
+    } catch (err) {
+      showError("Couldn't reach the ChronoSky engine. Make sure the server is running (uvicorn backend.main:app --reload) on port 8000.");
+      skymapPlaceholder.textContent = 'No sky to show yet.';
+      statusLine.textContent = '';
+    } finally {
+      travelBtn.disabled = false;
+      travelBtn.textContent = 'Travel here';
+    }
+  }
+
+  // ---- Exoplanet gallery (loads once, independent of date/time) ----
+  // ---- ISS visibility ----
+  function formatInSelectedZone(isoUtcString) {
+    const date = new Date(isoUtcString);
+    return date.toLocaleString(undefined, {
+      timeZone: timezoneSelect.value || detectTimezone(),
+      weekday: 'short', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  function renderIssPasses(passes) {
+    issPassList.innerHTML = '';
+
+    if (!passes || passes.length === 0) {
+      issPassList.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">No naked-eye-visible passes found in the next few days from this location.</div>';
+      return;
+    }
+
+    for (const p of passes) {
+      const card = document.createElement('div');
+      card.className = 'pass-card';
+      card.innerHTML = `
+        <div>
+          <div class="pass-date">${formatInSelectedZone(p.rise_utc)}</div>
+          <div class="pass-detail">Rises → peaks at ${p.max_altitude_deg.toFixed(0)}° → sets, over a few minutes</div>
+        </div>
+      `;
+      issPassList.appendChild(card);
+    }
+  }
+
+  issCheckBtn.addEventListener('click', async () => {
+    issPassList.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)"><span class="spinner"></span>Checking upcoming passes…</div>';
+    try {
+      let location = resolvedLocation;
+      if (locationInput.value.trim() !== resolvedLocation.query) {
+        location = await resolveLocation(locationInput.value);
+        locationMatch.textContent = `Matched: ${location.label}`;
+      }
+      const satellite = satelliteSelect.value;
+      const rows = await fetchJSON(`${API_BASE}/satellite-passes?satellite=${satellite}&latitude=${location.lat}&longitude=${location.lon}&days=5`);
+      renderIssPasses(rows);
+    } catch (err) {
+      issPassList.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t fetch satellite pass data right now.</div>';
+    }
+  });
+
+  // ---- Eclipses ----
+  function renderEclipseList(container, events, kind) {
+    container.innerHTML = '';
+    if (!events || events.length === 0) {
+      container.innerHTML = `<div class="status-line" style="color:var(--dim-starlight)">No ${kind} eclipses found in this window.</div>`;
+      return;
+    }
+    for (const e of events) {
+      const card = document.createElement('div');
+      card.className = 'pass-card';
+      const dateLabel = formatInSelectedZone(e.utc);
+      const detail = kind === 'lunar'
+        ? `${e.type} lunar eclipse${e.moon_above_horizon ? ' · Moon above your horizon' : ' · Moon below your horizon at this time'}`
+        : `Sun-Moon separation ${e.separation_deg.toFixed(2)}°${e.sun_above_horizon ? ' · daytime at your location' : ' · not daytime at your location'}`;
+      card.innerHTML = `
+        <div>
+          <div class="pass-date">${dateLabel}</div>
+          <div class="pass-detail">${detail}</div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+  }
+
+  eclipseCheckBtn.addEventListener('click', async () => {
+    lunarEclipseList.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)"><span class="spinner"></span>Checking…</div>';
+    solarEclipseList.innerHTML = '';
+    try {
+      let location = resolvedLocation;
+      if (locationInput.value.trim() !== resolvedLocation.query) {
+        location = await resolveLocation(locationInput.value);
+        locationMatch.textContent = `Matched: ${location.label}`;
+      }
+      const data = await fetchJSON(`${API_BASE}/eclipses?latitude=${location.lat}&longitude=${location.lon}&days=365`);
+      renderEclipseList(lunarEclipseList, data.lunar_eclipses, 'lunar');
+      renderEclipseList(solarEclipseList, data.solar_eclipses_approx, 'solar');
+    } catch (err) {
+      lunarEclipseList.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t fetch eclipse data right now.</div>';
+    }
+  });
+
+  // ---- Panchang ----
+  function renderPanchang(data) {
+    panchangCard.innerHTML = `
+      <div class="fact-card">
+        <div class="fact-headline">${data.tithi} <span style="font-size:14px;color:var(--dim-starlight);font-family:'IBM Plex Sans',sans-serif;">(${data.paksha} Paksha)</span></div>
+        <div class="fact-body">
+          Computed from the real Sun-Moon angular relationship for your chosen date, time, and location, using the same Lahiri ayanamsha (${data.ayanamsha_deg.toFixed(2)}°) as the Lagna calculation.
+        </div>
+        <div class="zodiac-compare">
+          <div class="zc-item">
+            <div class="zc-label">Vaara (weekday)</div>
+            <div class="zc-value">${data.vaara}</div>
+          </div>
+          <div class="zc-item">
+            <div class="zc-label">Nakshatra</div>
+            <div class="zc-value">${data.nakshatra} · Pada ${data.nakshatra_pada}</div>
+          </div>
+        </div>
+        <div class="zodiac-compare">
+          <div class="zc-item">
+            <div class="zc-label">Yoga</div>
+            <div class="zc-value">${data.yoga}</div>
+          </div>
+          <div class="zc-item">
+            <div class="zc-label">Karana</div>
+            <div class="zc-value">${data.karana}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---- Space weather ----
+  function renderSpaceWeather(data) {
+    spaceWeatherGrid.innerHTML = '';
+
+    if (data.kp_index) {
+      const kp = parseFloat(data.kp_index.Kp ?? data.kp_index.kp ?? NaN);
+      const card = document.createElement('div');
+      card.className = 'dsn-card';
+      card.innerHTML = `
+        <div class="dsn-name">Geomagnetic Kp index</div>
+        <div class="dsn-station">Higher = more likely aurora at high latitudes</div>
+        <div class="p-row"><span>Kp</span><span>${!isNaN(kp) ? kp.toFixed(2) : (data.kp_index.Kp ?? '—')}</span></div>
+        <div class="p-row"><span>As of</span><span>${data.kp_index.time_tag ?? '—'}</span></div>
+      `;
+      spaceWeatherGrid.appendChild(card);
+    }
+
+    if (data.latest_flare) {
+      const f = data.latest_flare;
+      const card = document.createElement('div');
+      card.className = 'dsn-card';
+      card.innerHTML = `
+        <div class="dsn-name">Latest solar flare</div>
+        <div class="dsn-station">GOES X-ray monitor</div>
+        <div class="p-row"><span>Class</span><span>${f.max_class ?? f.current_class ?? '—'}</span></div>
+        <div class="p-row"><span>Peak time</span><span>${f.max_time ?? f.begin_time ?? '—'}</span></div>
+      `;
+      spaceWeatherGrid.appendChild(card);
+    }
+
+    if (data.noaa_scales) {
+      const today = data.noaa_scales['0'] || data.noaa_scales['-1'] || Object.values(data.noaa_scales)[0];
+      if (today) {
+        const card = document.createElement('div');
+        card.className = 'dsn-card';
+        card.innerHTML = `
+          <div class="dsn-name">NOAA activity scales</div>
+          <div class="dsn-station">Radio blackout · geomagnetic storm · solar radiation</div>
+          <div class="p-row"><span>R (Radio)</span><span>${today.R?.Scale ?? '—'}</span></div>
+          <div class="p-row"><span>S (Radiation)</span><span>${today.S?.Scale ?? '—'}</span></div>
+          <div class="p-row"><span>G (Geomagnetic)</span><span>${today.G?.Scale ?? '—'}</span></div>
+        `;
+        spaceWeatherGrid.appendChild(card);
+      }
+    }
+
+    if (!spaceWeatherGrid.children.length) {
+      spaceWeatherGrid.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t load space weather data right now.</div>';
+    }
+  }
+
+  async function loadSpaceWeather() {
+    renderSkeleton(spaceWeatherGrid, 3);
+    try {
+      const data = await fetchJSON(`${API_BASE}/space-weather`);
+      renderSpaceWeather(data);
+    } catch (err) {
+      spaceWeatherGrid.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t load space weather data right now.</div>';
+    }
+  }
+
+  // ---- Deep Space Network ----
+  function formatDataRate(bps) {
+    if (!bps || bps <= 0) return '—';
+    if (bps >= 1e6) return `${(bps / 1e6).toFixed(1)} Mbps`;
+    if (bps >= 1e3) return `${(bps / 1e3).toFixed(1)} kbps`;
+    return `${bps.toFixed(0)} bps`;
+  }
+
+  function formatDistance(km) {
+    if (!km) return '—';
+    if (km > 1.5e8) return `${(km / 1.496e8).toFixed(2)} AU`;
+    return `${Math.round(km).toLocaleString()} km`;
+  }
+
+  function renderDsn(data) {
+    dsnGrid.innerHTML = '';
+    const signals = data.signals || [];
+
+    if (signals.length === 0) {
+      dsnGrid.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">No active spacecraft links right now.</div>';
+      return;
+    }
+
+    for (const s of signals) {
+      const card = document.createElement('div');
+      card.className = 'dsn-card';
+      card.innerHTML = `
+        <div class="dsn-name">${s.spacecraft_name}</div>
+        <div class="dsn-station">${s.station} · ${s.dish}</div>
+        <div class="p-row"><span>Downlink</span><span>${formatDataRate(s.data_rate_bps)}</span></div>
+        <div class="p-row"><span>Distance</span><span>${formatDistance(s.distance_km)}</span></div>
+        <div class="p-row"><span>Band</span><span>${s.band || '—'}</span></div>
+      `;
+      dsnGrid.appendChild(card);
+    }
+  }
+
+  async function loadDsn() {
+    renderSkeleton(dsnGrid, 4);
+    try {
+      const data = await fetchJSON(`${API_BASE}/deep-space-network`);
+      renderDsn(data);
+    } catch (err) {
+      dsnGrid.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t load live network status right now.</div>';
+    }
+  }
+
+  // ---- Zodiac, astronomically ----
+  const TRADITIONAL_ZODIAC = [
+    { name: 'Capricorn', from: [12, 22], to: [1, 19] },
+    { name: 'Aquarius', from: [1, 20], to: [2, 18] },
+    { name: 'Pisces', from: [2, 19], to: [3, 20] },
+    { name: 'Aries', from: [3, 21], to: [4, 19] },
+    { name: 'Taurus', from: [4, 20], to: [5, 20] },
+    { name: 'Gemini', from: [5, 21], to: [6, 20] },
+    { name: 'Cancer', from: [6, 21], to: [7, 22] },
+    { name: 'Leo', from: [7, 23], to: [8, 22] },
+    { name: 'Virgo', from: [8, 23], to: [9, 22] },
+    { name: 'Libra', from: [9, 23], to: [10, 22] },
+    { name: 'Scorpio', from: [10, 23], to: [11, 21] },
+    { name: 'Sagittarius', from: [11, 22], to: [12, 21] },
+  ];
+
+  function traditionalZodiacFor(month, day) {
+    for (const sign of TRADITIONAL_ZODIAC) {
+      const [fm, fd] = sign.from;
+      const [tm, td] = sign.to;
+      if (fm === tm) {
+        if (month === fm && day >= fd && day <= td) return sign.name;
+      } else if (
+        (month === fm && day >= fd) || (month === tm && day <= td)
+      ) {
+        return sign.name;
+      }
+    }
+    return '—';
+  }
+
+  // ---- Vedic Lagna & Nakshatra ----
+  function degToDegMin(deg) {
+    const d = Math.floor(deg);
+    const m = Math.round((deg - d) * 60);
+    return `${d}°${String(m).padStart(2, '0')}'`;
+  }
+
+  function renderLagna(data) {
+    lagnaCard.innerHTML = `
+      <div class="fact-card">
+        <div class="fact-headline">${data.rashi.name} Lagna <span style="font-size:14px;color:var(--dim-starlight);font-family:'IBM Plex Sans',sans-serif;">(${data.rashi.english})</span></div>
+        <div class="fact-body">
+          Computed from local sidereal time, the obliquity of the ecliptic, and your
+          latitude, then converted from the tropical to the sidereal zodiac using the
+          <strong>${data.ayanamsha_system}</strong> ayanamsha (currently ${data.ayanamsha_deg.toFixed(2)}°).
+          Lagna lord: <strong>${data.rashi.lord}</strong>.
+        </div>
+        <div class="zodiac-compare">
+          <div class="zc-item">
+            <div class="zc-label">Ascendant degree</div>
+            <div class="zc-value">${degToDegMin(data.degree_in_rashi)} ${data.rashi.name}</div>
+          </div>
+          <div class="zc-item">
+            <div class="zc-label">Moon's Nakshatra</div>
+            <div class="zc-value">${data.nakshatra} · Pada ${data.nakshatra_pada}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderZodiac(sunConstellation, month, day) {
+    const traditional = traditionalZodiacFor(month, day);
+    const matches = sunConstellation && traditional !== '—' &&
+      sunConstellation.toLowerCase() === traditional.toLowerCase();
+    latestZodiac = { traditional, real: sunConstellation || '—' };
+    zodiacCard.innerHTML = `
+      <div class="fact-card">
+        <div class="fact-headline">${matches ? 'They actually match!' : "They don't match — and that's normal"}</div>
+        <div class="fact-body">
+          Traditional Western astrology assigns zodiac signs to fixed calendar
+          dates, set roughly 2,000 years ago. Since then, Earth's slow axial
+          wobble has shifted where the Sun actually appears against the
+          background stars on any given date — so for most people today,
+          the sign and the real constellation the Sun is in no longer agree.
+        </div>
+        <div class="zodiac-compare">
+          <div class="zc-item">
+            <div class="zc-label">Traditional zodiac sign</div>
+            <div class="zc-value">${traditional}</div>
+          </div>
+          <div class="zc-item">
+            <div class="zc-label">Sun's real constellation</div>
+            <div class="zc-value">${sunConstellation || '—'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---- Age of starlight ----
+  const HISTORY_MARKERS = [
+    [-3000, 'the pyramids of Giza were built'],
+    [-776, 'the first ancient Olympic games'],
+    [-500, 'classical Greek philosophy was flourishing'],
+    [1, 'the start of the modern calendar era'],
+    [476, 'the fall of the Western Roman Empire'],
+    [1066, 'the Norman conquest of England'],
+    [1450, "Gutenberg's printing press"],
+    [1492, 'Columbus reached the Americas'],
+    [1687, "Newton published the Principia"],
+    [1776, 'the US Declaration of Independence'],
+    [1859, 'Darwin published On the Origin of Species'],
+    [1903, "the Wright brothers' first flight"],
+    [1945, 'the end of World War II'],
+    [1969, 'the Apollo 11 Moon landing'],
+    [1989, 'the fall of the Berlin Wall'],
+    [2007, 'the first iPhone'],
+    [2020, 'the COVID-19 pandemic began'],
+  ];
+
+  function nearestHistoryMarker(year) {
+    let best = null;
+    for (const [y, label] of HISTORY_MARKERS) {
+      if (y <= year) best = label;
+    }
+    return best;
+  }
+
+  function formatHistoricalYear(year) {
+    const rounded = Math.round(year);
+    return rounded < 0 ? `${Math.abs(rounded)} BCE` : `${rounded} CE`;
+  }
+
+  function renderStarlightAges(namedStars, referenceYear) {
+    starlightAgeList.innerHTML = '';
+    const entries = Object.entries(namedStars).filter(([, d]) => d.distance_ly);
+
+    if (entries.length === 0) {
+      starlightAgeList.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">No star distance data available.</div>';
+      return;
+    }
+
+    entries.sort((a, b) => b[1].distance_ly - a[1].distance_ly);
+
+    for (const [name, data] of entries) {
+      const departureYear = referenceYear - data.distance_ly;
+      const marker = nearestHistoryMarker(departureYear);
+      const card = document.createElement('div');
+      card.className = 'pass-card';
+      card.innerHTML = `
+        <div>
+          <div class="pass-date">${name}</div>
+          <div class="pass-detail">${data.distance_ly.toFixed(1)} light-years away — its light left around <strong>${formatHistoricalYear(departureYear)}</strong>${marker ? `, around the time ${marker}` : ''}.</div>
+        </div>
+      `;
+      starlightAgeList.appendChild(card);
+    }
+  }
+
+  // ---- Cosmic Earth twin ----
+  async function loadEarthTwin() {
+    earthTwinCard.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)"><span class="spinner"></span>Searching known exoplanets for the closest match to Earth…</div>';
+    try {
+      const p = await fetchJSON(`${API_BASE}/exoplanets/earth-twin`);
+      const lightYears = p.sy_dist ? (p.sy_dist * 3.26156).toFixed(1) : '—';
+      earthTwinCard.innerHTML = `
+        <div class="fact-card">
+          <div class="fact-headline">${p.pl_name}</div>
+          <div class="fact-body">
+            Right now, this is the confirmed exoplanet closest to Earth in
+            both size and temperature — the best real candidate we know of
+            for what a distant "Earth twin" might look like. It orbits
+            <strong>${p.hostname}</strong>, about <strong>${lightYears} light-years</strong> away,
+            discovered in <strong>${p.disc_year ?? '—'}</strong> via ${p.discoverymethod ?? 'an indirect method'}.
+          </div>
+          <div class="zodiac-compare">
+            <div class="zc-item">
+              <div class="zc-label">Radius vs Earth</div>
+              <div class="zc-value">${p.pl_rade ? p.pl_rade.toFixed(2) + '×' : '—'}</div>
+            </div>
+            <div class="zc-item">
+              <div class="zc-label">Equilibrium temp.</div>
+              <div class="zc-value">${p.pl_eqt ? p.pl_eqt + ' K' : '—'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      earthTwinCard.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t load this right now.</div>';
+    }
+  }
+
+  // ---- Moons of the solar system (curated, static facts) ----
+  const MOON_DATA = [
+    { planet: 'Earth', moons: [
+      { name: 'The Moon', diameter_km: 3474, discovered: 'Known since antiquity', period_days: 27.3, fact: "Earth's only natural satellite, and the largest moon relative to its planet in the solar system." },
+    ]},
+    { planet: 'Mars', moons: [
+      { name: 'Phobos', diameter_km: 22, discovered: '1877 · Asaph Hall', period_days: 0.32, fact: 'Orbits Mars faster than Mars itself rotates - it rises in the west and sets in the east.' },
+      { name: 'Deimos', diameter_km: 12, discovered: '1877 · Asaph Hall', period_days: 1.26, fact: 'The smaller and more distant of Mars\'s two tiny, oddly-shaped moons.' },
+    ]},
+    { planet: 'Jupiter', moons: [
+      { name: 'Io', diameter_km: 3643, discovered: '1610 · Galileo Galilei', period_days: 1.77, fact: 'The most volcanically active body in the entire solar system.' },
+      { name: 'Europa', diameter_km: 3122, discovered: '1610 · Galileo Galilei', period_days: 3.55, fact: 'Hides a liquid water ocean under its icy shell - a top target in the search for life.' },
+      { name: 'Ganymede', diameter_km: 5268, discovered: '1610 · Galileo Galilei', period_days: 7.15, fact: 'The largest moon in the solar system - bigger than the planet Mercury.' },
+      { name: 'Callisto', diameter_km: 4821, discovered: '1610 · Galileo Galilei', period_days: 16.7, fact: 'One of the most heavily cratered surfaces known in the solar system.' },
+    ]},
+    { planet: 'Saturn', moons: [
+      { name: 'Titan', diameter_km: 5150, discovered: '1655 · Christiaan Huygens', period_days: 15.9, fact: 'The only moon with a thick atmosphere, and with lakes and rivers of liquid methane on its surface.' },
+      { name: 'Enceladus', diameter_km: 504, discovered: '1789 · William Herschel', period_days: 1.37, fact: 'Shoots geysers of water ice into space from its south pole, from a hidden subsurface ocean.' },
+      { name: 'Mimas', diameter_km: 396, discovered: '1789 · William Herschel', period_days: 0.94, fact: 'Its giant Herschel crater gives it an unmistakable "Death Star" look.' },
+      { name: 'Iapetus', diameter_km: 1469, discovered: '1671 · Giovanni Cassini', period_days: 79.3, fact: 'Bizarrely two-toned - one hemisphere is bright ice, the other dark as coal.' },
+    ]},
+    { planet: 'Uranus', moons: [
+      { name: 'Titania', diameter_km: 1578, discovered: '1787 · William Herschel', period_days: 8.7, fact: "Uranus's largest moon, named after the queen of the fairies in Shakespeare." },
+      { name: 'Oberon', diameter_km: 1523, discovered: '1787 · William Herschel', period_days: 13.5, fact: 'Heavily cratered, with a mysterious dark red material on its crater floors.' },
+      { name: 'Miranda', diameter_km: 472, discovered: '1948 · Gerard Kuiper', period_days: 1.4, fact: "One of the strangest-looking moons known - a jumbled patchwork of wildly different terrains." },
+      { name: 'Ariel', diameter_km: 1158, discovered: '1851 · William Lassell', period_days: 2.5, fact: "The brightest of Uranus's moons, with a surface of canyons and ice." },
+    ]},
+    { planet: 'Neptune', moons: [
+      { name: 'Triton', diameter_km: 2707, discovered: '1846 · William Lassell', period_days: 5.88, fact: 'Orbits backwards compared to Neptune\'s rotation - almost certainly a captured object from the Kuiper Belt.' },
+    ]},
+  ];
+
+  function renderMoons() {
+    moonsContainer.innerHTML = '';
+    for (const group of MOON_DATA) {
+      const section = document.createElement('div');
+      section.className = 'moon-planet-group';
+      const cardsHtml = group.moons.map((m) => `
+        <div class="moon-card">
+          <div class="moon-name">${m.name}</div>
+          <div class="p-row"><span>Diameter</span><span>${m.diameter_km.toLocaleString()} km</span></div>
+          <div class="p-row"><span>Discovered</span><span>${m.discovered}</span></div>
+          <div class="p-row"><span>Orbital period</span><span>${m.period_days} days</span></div>
+          <div class="moon-fact">${m.fact}</div>
+        </div>
+      `).join('');
+      section.innerHTML = `<h3>${group.planet}</h3><div class="moon-grid">${cardsHtml}</div>`;
+      moonsContainer.appendChild(section);
+    }
+  }
+
+  // ---- 3D Sky Dome ----
+  const DOME_RADIUS = 400;
+  let domeInitialized = false;
+  let domeScene, domeCamera, domeRenderer;
+  let domeYaw = 0, domePitch = 0;
+  let domeStarGroup = null, domeNamedGroup = null, domePlanetGroup = null;
+  let latestVisibleStars = null, latestNamedStars = null, latestPlanetsData = null;
+  let latestLagnaData = null, latestPanchangData = null, latestZodiac = null;
+
+  const DOME_BODY_COLORS = {
+    Sun: '#F2D9A8', Moon: '#DDE3EC', Mercury: '#B5A79A', Venus: '#E3C989',
+    Mars: '#D97757', Jupiter: '#E0B36C', Saturn: '#C9974B',
+    Uranus: '#9FD8E0', Neptune: '#7A93E8',
+  };
+
+  function altAzToVector3(altDeg, azDeg, radius) {
+    const alt = (altDeg * Math.PI) / 180;
+    const az = (azDeg * Math.PI) / 180;
+    const horizontal = radius * Math.cos(alt);
+    return new THREE.Vector3(
+      horizontal * Math.sin(az),
+      radius * Math.sin(alt),
+      -horizontal * Math.cos(az)
+    );
+  }
+
+  function makeGlowTexture() {
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, 'rgba(255,255,255,1)');
+    gradient.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  function makeTextSprite(text, color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.font = 'bold 40px "IBM Plex Sans", sans-serif';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 64, 34);
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(28, 14, 1);
+    return sprite;
+  }
+
+  function initSkyDome() {
+    const width = skyDomeContainer.clientWidth || 600;
+    const height = skyDomeContainer.clientHeight || 520;
+
+    domeScene = new THREE.Scene();
+    domeScene.background = new THREE.Color(0x0e1526);
+
+    domeCamera = new THREE.PerspectiveCamera(70, width / height, 0.1, 2000);
+    domeCamera.rotation.order = 'YXZ';
+    domeCamera.position.set(0, 0, 0);
+
+    domeRenderer = new THREE.WebGLRenderer({ antialias: true });
+    domeRenderer.setPixelRatio(window.devicePixelRatio || 1);
+    domeRenderer.setSize(width, height);
+    skyDomeContainer.appendChild(domeRenderer.domElement);
+
+    // Horizon ring
+    const horizonPoints = [];
+    for (let i = 0; i <= 128; i++) {
+      const ang = (i / 128) * Math.PI * 2;
+      horizonPoints.push(new THREE.Vector3(
+        DOME_RADIUS * Math.sin(ang), 0, -DOME_RADIUS * Math.cos(ang)
+      ));
+    }
+    const horizonGeom = new THREE.BufferGeometry().setFromPoints(horizonPoints);
+    const horizonMat = new THREE.LineBasicMaterial({ color: 0xc9974b, transparent: true, opacity: 0.55 });
+    domeScene.add(new THREE.Line(horizonGeom, horizonMat));
+
+    // Cardinal direction labels sitting right on the horizon.
+    const cardinals = [['N', 0], ['E', 90], ['S', 180], ['W', 270]];
+    for (const [label, az] of cardinals) {
+      const pos = altAzToVector3(1, az, DOME_RADIUS - 15);
+      const sprite = makeTextSprite(label, '#E0B36C');
+      sprite.position.copy(pos);
+      domeScene.add(sprite);
+    }
+
+    domeStarGroup = new THREE.Group();
+    domeNamedGroup = new THREE.Group();
+    domePlanetGroup = new THREE.Group();
+    domeScene.add(domeStarGroup, domeNamedGroup, domePlanetGroup);
+
+    // Drag-to-look controls (no OrbitControls dependency).
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+
+    const onDown = (x, y) => { dragging = true; lastX = x; lastY = y; };
+    const onMove = (x, y) => {
+      if (!dragging) return;
+      const dx = x - lastX;
+      const dy = y - lastY;
+      domeYaw -= dx * 0.005;
+      domePitch = Math.max(-1.5, Math.min(1.5, domePitch - dy * 0.005));
+      lastX = x;
+      lastY = y;
+    };
+    const onUp = () => { dragging = false; };
+
+    const dom = domeRenderer.domElement;
+    dom.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', onUp);
+    dom.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      onDown(t.clientX, t.clientY);
+    }, { passive: true });
+    dom.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      onMove(t.clientX, t.clientY);
+    }, { passive: true });
+    dom.addEventListener('touchend', onUp);
+
+    dom.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      domeCamera.fov = Math.max(30, Math.min(100, domeCamera.fov + e.deltaY * 0.03));
+      domeCamera.updateProjectionMatrix();
+    }, { passive: false });
+
+    window.addEventListener('resize', () => {
+      if (!domeRenderer) return;
+      const w = skyDomeContainer.clientWidth || width;
+      const h = skyDomeContainer.clientHeight || height;
+      domeCamera.aspect = w / h;
+      domeCamera.updateProjectionMatrix();
+      domeRenderer.setSize(w, h);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      domeCamera.rotation.y = domeYaw;
+      domeCamera.rotation.x = domePitch;
+      domeRenderer.render(domeScene, domeCamera);
+    }
+    animate();
+  }
+
+  function updateSkyDome(visibleStars, namedStars, planetsData) {
+    if (!domeScene) return;
+
+    const glowTexture = makeGlowTexture();
+
+    // Rebuild the background star field, bucketed into 3 size tiers by
+    // real magnitude (brighter stars draw bigger and more opaque).
+    domeStarGroup.clear();
+    const tiers = [
+      { test: (m) => m < 1.0, size: 9, opacity: 1.0 },
+      { test: (m) => m >= 1.0 && m < 2.5, size: 6, opacity: 0.85 },
+      { test: (m) => m >= 2.5, size: 3.5, opacity: 0.6 },
+    ];
+    for (const tier of tiers) {
+      const positions = [];
+      for (const star of visibleStars) {
+        if (!tier.test(star.magnitude)) continue;
+        const v = altAzToVector3(star.altitude, star.azimuth, DOME_RADIUS);
+        positions.push(v.x, v.y, v.z);
+      }
+      if (positions.length === 0) continue;
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      const mat = new THREE.PointsMaterial({
+        size: tier.size, map: glowTexture, transparent: true,
+        opacity: tier.opacity, color: 0xf2f0e8,
+        blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      });
+      domeStarGroup.add(new THREE.Points(geom, mat));
+    }
+
+    // Named stars - highlighted, plus a legend since in-scene text
+    // labels for every one would clutter the view.
+    domeNamedGroup.clear();
+    domeLegend.innerHTML = '';
+
+    const namedEntries = Object.entries(namedStars || {}).filter(([, d]) => d.altitude > 0);
+    if (namedEntries.length > 0) {
+      const positions = [];
+      for (const [, data] of namedEntries) {
+        const v = altAzToVector3(data.altitude, data.azimuth, DOME_RADIUS - 5);
+        positions.push(v.x, v.y, v.z);
+      }
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      const mat = new THREE.PointsMaterial({
+        size: 14, map: glowTexture, transparent: true, opacity: 1,
+        color: 0xe0b36c, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      });
+      domeNamedGroup.add(new THREE.Points(geom, mat));
+
+      for (const [name] of namedEntries) {
+        const item = document.createElement('div');
+        item.className = 'dl-item';
+        item.innerHTML = `<span class="dl-dot" style="background:#E0B36C"></span>${name}`;
+        domeLegend.appendChild(item);
+      }
+    }
+
+    // Planets, Sun, and Moon - as small colored glowing spheres.
+    domePlanetGroup.clear();
+    for (const [name, data] of Object.entries(planetsData || {})) {
+      if (name === 'Earth' || data.altitude_deg === undefined || data.altitude_deg <= 0) continue;
+      const color = DOME_BODY_COLORS[name] || '#F2F0E8';
+      const v = altAzToVector3(data.altitude_deg, data.azimuth_deg, DOME_RADIUS - 10);
+      const geom = new THREE.SphereGeometry(name === 'Sun' || name === 'Moon' ? 6 : 4, 16, 16);
+      const mat = new THREE.MeshBasicMaterial({ color });
+      const mesh = new THREE.Mesh(geom, mat);
+      mesh.position.copy(v);
+      domePlanetGroup.add(mesh);
+
+      const item = document.createElement('div');
+      item.className = 'dl-item';
+      item.innerHTML = `<span class="dl-dot" style="background:${color}"></span>${name}`;
+      domeLegend.appendChild(item);
+    }
+  }
+
+  // ---- Is tonight worth going outside? (live weather + real moon brightness) ----
+  async function checkTonight() {
+    tonightCard.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)"><span class="spinner"></span>Checking real-time conditions…</div>';
+    try {
+      let location = resolvedLocation;
+      if (locationInput.value.trim() !== resolvedLocation.query) {
+        location = await resolveLocation(locationInput.value);
+        locationMatch.textContent = `Matched: ${location.label}`;
+      }
+
+      const now = new Date();
+      const nowParams = {
+        year: now.getUTCFullYear(), month: now.getUTCMonth() + 1, day: now.getUTCDate(),
+        hour: now.getUTCHours(), minute: now.getUTCMinutes(),
+        latitude: location.lat, longitude: location.lon,
+      };
+
+      const [planetsNow, weather] = await Promise.all([
+        fetchJSON(`${API_BASE}/planets?${qs(nowParams)}`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=cloud_cover`).then((r) => r.json()),
+      ]);
+
+      const illumination = planetsNow.Moon.illumination_fraction;
+      const cloudCover = weather && weather.current ? weather.current.cloud_cover : null;
+
+      let verdict, verdictColor;
+      if (cloudCover === null) {
+        verdict = "Couldn't get live cloud cover, but here's the moon brightness for reference.";
+        verdictColor = 'var(--dim-starlight)';
+      } else if (cloudCover > 60) {
+        verdict = `Mostly cloudy right now (${cloudCover}% cover) — probably not tonight.`;
+        verdictColor = '#E0684C';
+      } else if (illumination > 0.7 && cloudCover > 20) {
+        verdict = `Skies are fairly clear (${cloudCover}% cover), but a bright Moon (${Math.round(illumination * 100)}% lit) will wash out fainter stars.`;
+        verdictColor = '#E0C46C';
+      } else if (cloudCover <= 20) {
+        verdict = `Clear skies (${cloudCover}% cover) and a ${Math.round(illumination * 100)}% lit Moon — good conditions tonight.`;
+        verdictColor = '#6FE3D9';
+      } else {
+        verdict = `Reasonably clear (${cloudCover}% cover) — decent conditions tonight.`;
+        verdictColor = '#6FE3D9';
+      }
+
+      tonightCard.innerHTML = `
+        <div class="fact-card">
+          <div class="fact-headline" style="color:${verdictColor};font-size:17px;">${verdict}</div>
+          <div class="zodiac-compare">
+            <div class="zc-item">
+              <div class="zc-label">Live cloud cover</div>
+              <div class="zc-value">${cloudCover !== null ? cloudCover + '%' : '—'}</div>
+            </div>
+            <div class="zc-item">
+              <div class="zc-label">Moon brightness right now</div>
+              <div class="zc-value">${Math.round(illumination * 100)}% lit</div>
+            </div>
+          </div>
+          <div class="fact-body" style="margin-top:8px;">Cloud data: Open-Meteo, live. Moon data: computed for this exact moment at your location.</div>
+        </div>
+      `;
+    } catch (err) {
+      tonightCard.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t check tonight\'s conditions right now.</div>';
+    }
+  }
+
+  tonightCheckBtn.addEventListener('click', checkTonight);
+
+  // ---- Voice narration (accessibility) ----
+  function buildSkyNarrationText() {
+    if (!latestPlanetsData || !latestNamedStars) {
+      return "Travel to a moment first, then I can read the sky for you.";
+    }
+
+    const parts = [];
+    parts.push(`The sky for ${dateInput.value} at ${timeInput.value}, ${timezoneSelect.value}, from ${locationInput.value}.`);
+
+    const visiblePlanets = Object.entries(latestPlanetsData)
+      .filter(([name, d]) => name !== 'Earth' && d.altitude_deg > 0)
+      .sort((a, b) => b[1].altitude_deg - a[1].altitude_deg)
+      .slice(0, 4);
+    if (visiblePlanets.length) {
+      const list = visiblePlanets.map(([name, d]) => `${name}, ${Math.round(d.altitude_deg)} degrees up`).join('; ');
+      parts.push(`Visible right now: ${list}.`);
+    } else {
+      parts.push('No planets are above the horizon at this moment.');
+    }
+
+    const visibleStars = Object.entries(latestNamedStars)
+      .filter(([, d]) => d.altitude > 0)
+      .sort((a, b) => b[1].altitude - a[1].altitude)
+      .slice(0, 3);
+    if (visibleStars.length) {
+      parts.push(`Notable stars overhead: ${visibleStars.map(([n]) => n).join(', ')}.`);
+    }
+
+    if (latestPlanetsData.Moon && typeof latestPlanetsData.Moon.phase_deg === 'number') {
+      parts.push(`The Moon is a ${moonPhaseName(latestPlanetsData.Moon.phase_deg).toLowerCase()}, ${Math.round(latestPlanetsData.Moon.illumination_fraction * 100)} percent illuminated.`);
+    }
+
+    return parts.join(' ');
+  }
+
+  speakBtn.addEventListener('click', () => {
+    if (!('speechSynthesis' in window)) {
+      showError('Your browser does not support voice narration.');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(buildSkyNarrationText());
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+  });
+
+  // ---- Cosmic Identity Card ----
+  function pickStarlightFact() {
+    if (!latestNamedStars) return null;
+    const entries = Object.entries(latestNamedStars).filter(([, d]) => d.distance_ly);
+    if (!entries.length) return null;
+    const visible = entries.filter(([, d]) => d.altitude > 0);
+    const pool = visible.length ? visible : entries;
+    pool.sort((a, b) => b[1].altitude - a[1].altitude);
+    const [name, data] = pool[0];
+    const year = getLocalDateTimeInput().year - data.distance_ly;
+    const marker = nearestHistoryMarker(year);
+    return { name, year: formatHistoricalYear(year), marker };
+  }
+
+  function generateIdentityCard() {
+    if (!latestPlanetsData || !latestLagnaData || !latestZodiac) {
+      identityCardWrap.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Travel to a moment first (on any tab), then generate your card.</div>';
+      return;
+    }
+
+    const moon = latestPlanetsData.Moon;
+    const starlight = pickStarlightFact();
+    const panchangLine = latestPanchangData
+      ? `${latestPanchangData.tithi} (${latestPanchangData.paksha}) · ${latestPanchangData.vaara}`
+      : '—';
+
+    identityCardWrap.innerHTML = `
+      <div>
+        <div class="identity-card" id="identityCardInner">
+          <div class="identity-header">
+            <div class="id-word">ChronoSky — Cosmic Identity</div>
+            <div class="id-moment">${dateInput.value} · ${timeInput.value} (${timezoneSelect.value}) · ${locationInput.value}</div>
+          </div>
+          <div class="identity-body">
+            <div>
+              <img src="${skymapImg.src}" alt="Sky map" onerror="this.style.display='none'" />
+              <div class="id-item" style="margin-top:12px;">
+                <div class="id-label">Zodiac — traditional vs. real</div>
+                <div class="id-value">${latestZodiac.traditional} / ${latestZodiac.real}</div>
+              </div>
+              <div class="id-item">
+                <div class="id-label">Panchang</div>
+                <div class="id-value" style="font-size:13px;">${panchangLine}</div>
+              </div>
+            </div>
+            <div>
+              <div class="id-item">
+                <div class="id-label">Vedic Lagna &amp; Nakshatra</div>
+                <div class="id-value">${latestLagnaData.rashi.name} · ${latestLagnaData.nakshatra} Pada ${latestLagnaData.nakshatra_pada}</div>
+              </div>
+              <div class="id-item">
+                <div class="id-label">Moon</div>
+                <div class="id-moon-row">
+                  <canvas id="identityMoonCanvas" width="30" height="30"></canvas>
+                  <div class="id-value" style="font-size:13px;">${moon && typeof moon.phase_deg === 'number' ? moonPhaseName(moon.phase_deg) : '—'}</div>
+                </div>
+              </div>
+              <div class="id-item">
+                <div class="id-label">Starlight you're seeing</div>
+                <div class="id-value" style="font-size:13px;">${starlight ? `${starlight.name}: left ${starlight.year}${starlight.marker ? ', around ' + starlight.marker : ''}` : '—'}</div>
+              </div>
+            </div>
+          </div>
+          <div class="identity-footer">Generated by ChronoSky · every figure here is computed from real astronomical data</div>
+        </div>
+        <button type="button" class="link-btn" id="identityDownloadBtn">Download as image</button>
+      </div>
+    `;
+
+    if (moon && typeof moon.phase_deg === 'number') {
+      const canvas = document.getElementById('identityMoonCanvas');
+      drawMoonIcon(canvas, moon.phase_deg, moon.illumination_fraction);
+    }
+
+    document.getElementById('identityDownloadBtn').addEventListener('click', downloadIdentityCard);
+  }
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let curY = y;
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+        ctx.fillText(line.trim(), x, curY);
+        line = words[n] + ' ';
+        curY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line.trim(), x, curY);
+    return curY + lineHeight;
+  }
+
+  async function downloadIdentityCard() {
+    if (!latestPlanetsData || !latestLagnaData || !latestZodiac) return;
+
+    // Wait for the web fonts to actually be ready - canvas text uses
+    // whatever font is loaded at draw time, so drawing too early would
+    // silently fall back to a generic font.
+    try {
+      await Promise.all([
+        document.fonts.load('italic 600 34px Fraunces'),
+        document.fonts.load('600 20px Fraunces'),
+        document.fonts.load('400 15px "IBM Plex Sans"'),
+        document.fonts.load('500 15px "IBM Plex Sans"'),
+      ]);
+    } catch (e) { /* fall back to default fonts if this fails */ }
+
+    const NAVY = '#0E1526', PANEL = '#172036', BRASS = '#C9974B',
+      BRASS_BRIGHT = '#E0B36C', STARLIGHT = '#F2F0E8', DIM = '#9AA3B8';
+
+    const W = 900, PAD = 56;
+    const moon = latestPlanetsData.Moon;
+    const starlight = pickStarlightFact();
+    const panchangLine = latestPanchangData
+      ? `${latestPanchangData.tithi} (${latestPanchangData.paksha}) · ${latestPanchangData.vaara}`
+      : null;
+
+    function buildCanvas(includeMap) {
+      // Figure out the sky map's drawn height up front so we know the
+      // full canvas height before drawing anything.
+      const mapSize = W - PAD * 2;
+      const mapDrawH = includeMap && skymapImg.naturalWidth && skymapImg.naturalHeight
+        ? mapSize * (skymapImg.naturalHeight / skymapImg.naturalWidth)
+        : (includeMap ? mapSize : 0);
+      const H = 300 + mapDrawH + 430 - (includeMap ? 0 : 40);
+
+      const canvas = document.createElement('canvas');
+      const scale = 2;
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      // Background + border
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, PANEL);
+      grad.addColorStop(1, NAVY);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = BRASS;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, W - 2, H - 2);
+
+      let y = 62;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = BRASS_BRIGHT;
+      ctx.font = 'italic 600 30px Fraunces, serif';
+      ctx.fillText('ChronoSky — Cosmic Identity', W / 2, y);
+
+      y += 30;
+      ctx.font = '400 14px "IBM Plex Sans", sans-serif';
+      ctx.fillStyle = DIM;
+      ctx.fillText(
+        `${dateInput.value} · ${timeInput.value} (${timezoneSelect.value}) · ${locationInput.value}`,
+        W / 2, y
+      );
+
+      y += 22;
+      ctx.strokeStyle = 'rgba(201,151,75,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD, y);
+      ctx.lineTo(W - PAD, y);
+      ctx.stroke();
+
+      // Sky map
+      y += 28;
+      if (includeMap) {
+        ctx.drawImage(skymapImg, PAD, y, mapSize, mapDrawH);
+        y += mapDrawH + 40;
+      }
+
+      // Fact sections
+      ctx.textAlign = 'left';
+      const labelColor = '#7A88A8';
+      const valueFont = '600 19px Fraunces, serif';
+      const labelFont = '500 11px "IBM Plex Sans", sans-serif';
+      const bodyFont = '400 14px "IBM Plex Sans", sans-serif';
+
+      function drawFact(label, valueDrawFn) {
+        ctx.font = labelFont;
+        ctx.fillStyle = labelColor;
+        ctx.fillText(label.toUpperCase(), PAD, y);
+        y += 22;
+        ctx.fillStyle = STARLIGHT;
+        valueDrawFn();
+        y += 30;
+      }
+
+      drawFact('Vedic Lagna & Nakshatra', () => {
+        ctx.font = valueFont;
+        ctx.fillText(`${latestLagnaData.rashi.name} · ${latestLagnaData.nakshatra} Pada ${latestLagnaData.nakshatra_pada}`, PAD, y);
+      });
+
+      if (moon && typeof moon.phase_deg === 'number') {
+        ctx.font = labelFont;
+        ctx.fillStyle = labelColor;
+        ctx.fillText('MOON', PAD, y);
+        y += 8;
+        const moonCanvas = document.createElement('canvas');
+        moonCanvas.width = 36; moonCanvas.height = 36;
+        drawMoonIcon(moonCanvas, moon.phase_deg, moon.illumination_fraction);
+        ctx.drawImage(moonCanvas, PAD, y, 32, 32);
+        ctx.font = valueFont;
+        ctx.fillStyle = STARLIGHT;
+        ctx.fillText(moonPhaseName(moon.phase_deg), PAD + 44, y + 23);
+        y += 32 + 28;
+      }
+
+      if (starlight) {
+        drawFact("Starlight you're seeing", () => {
+          ctx.font = bodyFont;
+          y = wrapCanvasText(
+            ctx,
+            `${starlight.name}: left ${starlight.year}${starlight.marker ? ', around ' + starlight.marker : ''}`,
+            PAD, y, W - PAD * 2, 20
+          ) - 20;
+        });
+      }
+
+      drawFact('Zodiac — traditional vs. real', () => {
+        ctx.font = valueFont;
+        ctx.fillText(`${latestZodiac.traditional} / ${latestZodiac.real}`, PAD, y);
+      });
+
+      if (panchangLine) {
+        drawFact('Panchang', () => {
+          ctx.font = '600 15px Fraunces, serif';
+          ctx.fillText(panchangLine, PAD, y);
+        });
+      }
+
+      // Footer
+      ctx.strokeStyle = 'rgba(201,151,75,0.4)';
+      ctx.beginPath();
+      ctx.moveTo(PAD, H - 40);
+      ctx.lineTo(W - PAD, H - 40);
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.font = '400 11px "IBM Plex Sans", sans-serif';
+      ctx.fillStyle = '#5F6C88';
+      ctx.fillText('Generated by ChronoSky · every figure here is computed from real astronomical data', W / 2, H - 20);
+
+      return canvas;
+    }
+
+    function triggerDownload(canvas) {
+      const link = document.createElement('a');
+      link.download = 'chronosky-cosmic-identity.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    try {
+      triggerDownload(buildCanvas(true));
+    } catch (err) {
+      // Most likely a tainted-canvas security error from the sky map
+      // image - retry without it rather than failing the whole card.
+      try {
+        triggerDownload(buildCanvas(false));
+        showError('Downloaded without the sky map thumbnail - your browser blocked that image from being exported. Everything else is included.');
+      } catch (err2) {
+        showError("Couldn't export the image — try a screenshot of the card instead (Windows: Win+Shift+S).");
+      }
+    }
+  }
+
+
+  generateIdentityBtn.addEventListener('click', generateIdentityCard);
+
+  async function loadExoplanets() {
+    renderSkeleton(exoGrid, 6);
+    try {
+      const rows = await fetchJSON(`${API_BASE}/exoplanets?limit=24`);
+      renderExoplanets(rows);
+    } catch (err) {
+      exoGrid.innerHTML = '<div class="status-line" style="color:var(--dim-starlight)">Couldn\'t load exoplanet data right now.</div>';
+    }
+  }
+
+  populateTimezones();
+  renderSpotlight();
+  updateHistoryNote();
+  renderMoons();
+  setMode('skymap');
+  travelBtn.addEventListener('click', travel);
+  travel();
+  loadExoplanets();
+  loadEarthTwin();
+  loadDsn();
+  loadSpaceWeather();
+</script>
+
+</body>
+</html>

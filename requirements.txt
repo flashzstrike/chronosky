@@ -1,0 +1,7 @@
+skyfield
+numpy
+pandas
+matplotlib
+fastapi
+uvicorn[standard]
+requests

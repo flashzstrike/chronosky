@@ -1,0 +1,16 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# PyInstaller build artifacts (from the desktop app attempt - safe to remove launcher.py too)
+build/
+dist/
+*.spec
+
+# OS clutter
+.DS_Store
+Thumbs.db
