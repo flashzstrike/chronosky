@@ -25,6 +25,75 @@
     --radius-md: 6px;
   }
 
+  /* ---- "Odyssey" alternate theme ----
+     An original homage to the stark black/white/red console aesthetic
+     of 1960s-70s space-mission sci-fi - not a reproduction of any
+     specific copyrighted character or scene. Pure variable overrides,
+     so it re-skins the whole app through the same cascade as the
+     default theme - no new fonts or images, zero added page weight. */
+  html[data-theme="odyssey"] {
+    --navy: #000000;
+    --navy-panel: #141414;
+    --brass: #B91C1C;
+    --brass-bright: #E8362B;
+    --cyan: #C7C7C7;
+    --ink: #000000;
+    --starlight: #FFFFFF;
+    --dim-starlight: #8C8C8C;
+    --danger: #E8362B;
+    --radius-sm: 0px;
+    --radius-md: 0px;
+  }
+
+  html[data-theme="odyssey"] body {
+    font-family: ui-monospace, 'Courier New', monospace;
+    background-image: none;
+  }
+
+  html[data-theme="odyssey"] .wordmark,
+  html[data-theme="odyssey"] .wordmark-tag,
+  html[data-theme="odyssey"] .panel h2,
+  html[data-theme="odyssey"] section.data h2,
+  html[data-theme="odyssey"] .tab-btn,
+  html[data-theme="odyssey"] button.travel,
+  html[data-theme="odyssey"] .field label,
+  html[data-theme="odyssey"] .moon-planet-group h3,
+  html[data-theme="odyssey"] .footer-cols h4,
+  html[data-theme="odyssey"] .glossary-category {
+    font-family: ui-monospace, 'Courier New', monospace !important;
+    letter-spacing: 2px;
+  }
+
+  html[data-theme="odyssey"] .tab-btn,
+  html[data-theme="odyssey"] .panel,
+  html[data-theme="odyssey"] .field input,
+  html[data-theme="odyssey"] .field select,
+  html[data-theme="odyssey"] .nudge,
+  html[data-theme="odyssey"] button.travel,
+  html[data-theme="odyssey"] .skymap-card,
+  html[data-theme="odyssey"] .hologram-card,
+  html[data-theme="odyssey"] .dome-card,
+  html[data-theme="odyssey"] .fact-card,
+  html[data-theme="odyssey"] .planet-card,
+  html[data-theme="odyssey"] .exo-card,
+  html[data-theme="odyssey"] .dsn-card,
+  html[data-theme="odyssey"] .moon-card,
+  html[data-theme="odyssey"] .glossary-term,
+  html[data-theme="odyssey"] .pass-card,
+  html[data-theme="odyssey"] .spotlight-card,
+  html[data-theme="odyssey"] .star-pill,
+  html[data-theme="odyssey"] .identity-card {
+    border-radius: 0 !important;
+  }
+
+  html[data-theme="odyssey"] .wordmark-rule {
+    background: var(--brass-bright);
+  }
+
+  html[data-theme="odyssey"] .theme-toggle {
+    border-color: var(--brass-bright);
+  }
+
   * { box-sizing: border-box; }
 
   body {
@@ -53,6 +122,36 @@
 
   header.top {
     margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .theme-toggle {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid rgba(201, 151, 75, 0.4);
+    color: var(--dim-starlight);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .theme-toggle:hover {
+    color: var(--brass-bright);
+    border-color: var(--brass);
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
   }
 
   .brand {
@@ -1117,6 +1216,7 @@
       </div>
       <div class="tagline">Travel to any moment in history and see the real sky, live spacecraft, and worlds beyond our own — powered by NASA and JPL data.</div>
     </div>
+    <button type="button" class="theme-toggle" id="themeToggle">● Odyssey Mode</button>
   </header>
 
   <nav class="tab-bar" id="tabBar">
@@ -1459,6 +1559,19 @@
 
   document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  });
+
+  // ---- Odyssey theme toggle ----
+  const themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', () => {
+    const isOdyssey = document.documentElement.getAttribute('data-theme') === 'odyssey';
+    if (isOdyssey) {
+      document.documentElement.removeAttribute('data-theme');
+      themeToggle.textContent = '● Odyssey Mode';
+    } else {
+      document.documentElement.setAttribute('data-theme', 'odyssey');
+      themeToggle.textContent = '● Classic Mode';
+    }
   });
 
   // Remembers the last successfully resolved location, so we don't
