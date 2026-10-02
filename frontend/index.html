@@ -1561,6 +1561,78 @@
     btn.addEventListener('click', () => setMode(btn.dataset.mode));
   });
 
+  // ---- Odyssey theme toggle + an original, synthesized fanfare ----
+  // This is NOT a recording of anything - every note is generated
+  // live with the Web Audio API. The underlying melody (Richard
+  // Strauss's "Also sprach Zarathustra" opening motif, 1896) is in
+  // the public domain; only specific RECORDINGS of it are
+  // copyrighted, and no recording is used or needed here.
+  let odysseyAudioCtx = null;
+  let odysseyDrone = null;
+
+  function playOdysseyFanfare(ctx) {
+    const now = ctx.currentTime;
+    const notes = [
+      { freq: 130.81, start: 0.0, dur: 1.3 },   // C3
+      { freq: 196.00, start: 1.4, dur: 1.3 },   // G3
+      { freq: 261.63, start: 2.8, dur: 2.4 },   // C4
+    ];
+    for (const n of notes) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = n.freq;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, now + n.start);
+      gain.gain.linearRampToValueAtTime(0.16, now + n.start + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + n.start + n.dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + n.start);
+      osc.stop(now + n.start + n.dur + 0.1);
+    }
+    // A soft low rumble under the fanfare, standing in for the
+    // famous timpani hits, without sampling anything.
+    const rumble = ctx.createOscillator();
+    rumble.type = 'triangle';
+    rumble.frequency.value = 55;
+    const rumbleGain = ctx.createGain();
+    rumbleGain.gain.setValueAtTime(0.0001, now);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.1, now + 0.1);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.0001, now + 4.8);
+    rumble.connect(rumbleGain).connect(ctx.destination);
+    rumble.start(now);
+    rumble.stop(now + 5);
+  }
+
+  function startOdysseyDrone(ctx) {
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.value = 65.41; // low C2
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = 65.41 * 1.5; // a perfect fifth above
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+    osc1.start();
+    osc2.start();
+    gain.gain.linearRampToValueAtTime(0.03, ctx.currentTime + 5);
+    return { osc1, osc2, gain };
+  }
+
+  function stopOdysseyDrone() {
+    if (!odysseyDrone || !odysseyAudioCtx) return;
+    const { osc1, osc2, gain } = odysseyDrone;
+    const now = odysseyAudioCtx.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 1);
+    osc1.stop(now + 1.1);
+    osc2.stop(now + 1.1);
+    odysseyDrone = null;
+  }
+
   // ---- Odyssey theme toggle ----
   const themeToggle = document.getElementById('themeToggle');
   themeToggle.addEventListener('click', () => {
@@ -1568,9 +1640,20 @@
     if (isOdyssey) {
       document.documentElement.removeAttribute('data-theme');
       themeToggle.textContent = '● Odyssey Mode';
+      stopOdysseyDrone();
     } else {
       document.documentElement.setAttribute('data-theme', 'odyssey');
       themeToggle.textContent = '● Classic Mode';
+      try {
+        if (!odysseyAudioCtx) {
+          odysseyAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (odysseyAudioCtx.state === 'suspended') odysseyAudioCtx.resume();
+        playOdysseyFanfare(odysseyAudioCtx);
+        odysseyDrone = startOdysseyDrone(odysseyAudioCtx);
+      } catch (err) {
+        // Web Audio unsupported or blocked - the visual theme still works fine without it.
+      }
     }
   });
 
