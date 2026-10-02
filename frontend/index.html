@@ -509,16 +509,30 @@
     margin-bottom: 6px;
   }
 
-  .planet-card .p-row {
+  /* Base layout for every .p-row, regardless of which card type it's
+     in (planet/exo/dsn/moon/mission cards all share this class) -
+     individual card types below only override color accents. */
+  .p-row {
     font-size: 12.5px;
     color: var(--dim-starlight);
     display: flex;
     justify-content: space-between;
+    gap: 10px;
     padding: 2px 0;
   }
 
-  .planet-card .p-row span:last-child {
+  .p-row span:first-child {
+    flex-shrink: 0;
+  }
+
+  .p-row span:last-child {
     color: var(--starlight);
+    text-align: right;
+  }
+
+  .planet-card .p-row {
+    font-size: 12.5px;
+    color: var(--dim-starlight);
   }
 
   .planet-card.below .p-row span:last-child {
@@ -852,6 +866,45 @@
     font-style: italic;
   }
 
+  /* ---- Glossary ---- */
+  .glossary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .glossary-term {
+    background: var(--navy-panel);
+    border-left: 3px solid var(--brass);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+  }
+
+  .glossary-term .gt-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--brass-bright);
+    margin-bottom: 4px;
+  }
+
+  .glossary-term .gt-def {
+    font-size: 12.5px;
+    color: var(--dim-starlight);
+    line-height: 1.5;
+  }
+
+  .glossary-category {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin: 18px 0 8px;
+  }
+
   .exo-card .exo-year {
     position: absolute;
     top: 12px;
@@ -1079,6 +1132,7 @@
     <button type="button" class="tab-btn" data-mode="skyfacts">Sky Facts</button>
     <button type="button" class="tab-btn" data-mode="identity">Cosmic Identity Card</button>
     <button type="button" class="tab-btn" data-mode="moons">Moons</button>
+    <button type="button" class="tab-btn" data-mode="learn">Learn</button>
   </nav>
 
   <div class="error-banner" id="errorBanner"></div>
@@ -1273,6 +1327,26 @@
         <div id="moonsContainer"></div>
       </div>
 
+      <div class="mode-block" data-mode="learn">
+        <div class="section-head">
+          <h2>Plain-language glossary</h2>
+          <div class="section-note">Every term used in ChronoSky, explained simply</div>
+        </div>
+        <div class="glossary-grid" id="glossaryGrid"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>What's happening in space right now</h2>
+          <div class="section-note">Real, currently active or recent missions</div>
+        </div>
+        <div class="moon-grid" id="missionsGrid"></div>
+
+        <div class="section-head" style="margin-top:28px;">
+          <h2>Space history timeline</h2>
+          <div class="section-note">Every milestone ChronoSky knows about, in order</div>
+        </div>
+        <div class="pass-list" id="historyTimeline"></div>
+      </div>
+
     </div>
 
   </div>
@@ -1359,6 +1433,9 @@
   const speakBtn = document.getElementById('speakBtn');
   const starlightAgeList = document.getElementById('starlightAgeList');
   const moonsContainer = document.getElementById('moonsContainer');
+  const glossaryGrid = document.getElementById('glossaryGrid');
+  const missionsGrid = document.getElementById('missionsGrid');
+  const historyTimeline = document.getElementById('historyTimeline');
   const skyDomeContainer = document.getElementById('skyDomeContainer');
   const domeLegend = document.getElementById('domeLegend');
 
@@ -1394,8 +1471,13 @@
     '01-28': { year: 1986, text: "the Space Shuttle Challenger was lost 73 seconds after launch." },
     '02-01': { year: 2003, text: 'the Space Shuttle Columbia broke apart on re-entry.' },
     '02-18': { year: 2021, text: "NASA's Perseverance rover landed on Mars." },
+    '02-20': { year: 1962, text: 'John Glenn became the first American to orbit Earth.' },
+    '03-18': { year: 1965, text: 'Alexei Leonov performed the first spacewalk in history.' },
+    '04-01': { year: 2026, text: "NASA's Artemis II flew the first crewed lunar flyby since Apollo." },
     '04-12': { year: 1961, text: 'Yuri Gagarin became the first human in space.' },
     '04-24': { year: 1990, text: 'the Hubble Space Telescope was launched.' },
+    '05-05': { year: 1961, text: 'Alan Shepard became the first American in space.' },
+    '06-16': { year: 1963, text: 'Valentina Tereshkova became the first woman in space.' },
     '07-01': { year: 2004, text: 'the Cassini spacecraft entered orbit around Saturn.' },
     '07-14': { year: 2015, text: "NASA's New Horizons made its historic flyby of Pluto." },
     '07-20': { year: 1969, text: 'Apollo 11 became the first crewed Moon landing.' },
@@ -1403,7 +1485,9 @@
     '08-20': { year: 1977, text: 'Voyager 2 was launched on its grand tour of the outer planets.' },
     '09-05': { year: 1977, text: 'Voyager 1 was launched, later becoming the most distant human-made object.' },
     '10-04': { year: 1957, text: 'Sputnik 1 became the first artificial satellite in orbit.' },
+    '10-14': { year: 2024, text: "NASA's Europa Clipper launched toward Jupiter's icy moon Europa." },
     '11-20': { year: 1998, text: 'Zarya, the first module of the International Space Station, was launched.' },
+    '12-14': { year: 1972, text: 'Eugene Cernan became the last person to walk on the Moon, during Apollo 17.' },
     '12-25': { year: 2021, text: 'the James Webb Space Telescope was launched.' },
   };
 
@@ -2496,6 +2580,101 @@
     }
   }
 
+  // ---- Learn: glossary, current missions, history timeline ----
+  const GLOSSARY = {
+    'Astronomy terms': [
+      { term: 'Light-year', def: "The distance light travels in one year - about 9.5 trillion km. It measures huge distances, not time." },
+      { term: 'Astronomical Unit (AU)', def: 'The distance from Earth to the Sun - about 150 million km. Used for distances within our solar system.' },
+      { term: 'Magnitude', def: 'How bright a star looks from Earth. Confusingly, a LOWER number means a BRIGHTER star.' },
+      { term: 'Altitude', def: "How high something is above the horizon, in degrees. 0° is the horizon, 90° is straight overhead." },
+      { term: 'Azimuth', def: 'Which direction to look, like a compass - 0° North, 90° East, 180° South, 270° West.' },
+      { term: 'Constellation', def: 'A pattern of stars that forms a recognizable shape, like a cosmic dot-to-dot.' },
+      { term: 'Ecliptic', def: "The path the Sun appears to trace across the sky over a year, due to Earth's orbit." },
+      { term: 'Exoplanet', def: 'A planet that orbits a star other than our own Sun.' },
+      { term: 'Eclipse', def: 'When one space object passes in front of another and blocks its light - like the Moon covering the Sun.' },
+      { term: 'Equilibrium temperature', def: "An estimated temperature for a planet based on the starlight it receives - used since we can't visit most exoplanets to check." },
+      { term: 'Sidereal time', def: "Time measured against the stars instead of the Sun - tracks Earth's rotation relative to deep space." },
+      { term: 'Kp index', def: 'A 0-9 scale for how disturbed Earth\'s magnetic field is. Higher means a better chance of seeing the aurora.' },
+      { term: 'Solar flare', def: "A sudden burst of energy from the Sun's surface - can affect radio signals and satellites." },
+      { term: 'Orbital pass (TLE)', def: "A small set of numbers describing exactly where a satellite is - used to predict when you'll see it overhead." },
+    ],
+    'Vedic astrology terms': [
+      { term: 'Lagna (Ascendant)', def: 'The zodiac sign rising on the eastern horizon at the exact moment someone is born.' },
+      { term: 'Rashi', def: 'The Vedic (sidereal) zodiac sign - like Western signs, but calculated against real star positions.' },
+      { term: 'Nakshatra', def: "One of 27 'lunar mansions' the Moon passes through each month - a more detailed system than the 12 signs." },
+      { term: 'Pada', def: 'A quarter-division of a Nakshatra, for extra precision.' },
+      { term: 'Ayanamsha', def: "The gap between the Western and Vedic zodiacs, which grows slowly over centuries. ChronoSky uses the official Lahiri ayanamsha." },
+      { term: 'Tithi', def: 'A lunar day - one of 30 divisions of a lunar month, based on the Sun-Moon angle.' },
+      { term: 'Paksha', def: 'Which half of the lunar month it is - Shukla (waxing/brightening) or Krishna (waning/dimming).' },
+      { term: 'Vaara', def: 'The day of the week in the Hindu calendar.' },
+      { term: 'Yoga', def: 'One of 27 combinations based on the combined Sun+Moon position - another layer of the Vedic calendar.' },
+      { term: 'Karana', def: 'Half of a Tithi - an even finer unit of the lunar calendar.' },
+    ],
+  };
+
+  function renderGlossary() {
+    glossaryGrid.innerHTML = '';
+    for (const [category, terms] of Object.entries(GLOSSARY)) {
+      const heading = document.createElement('div');
+      heading.className = 'glossary-category';
+      heading.style.gridColumn = '1 / -1';
+      heading.textContent = category;
+      glossaryGrid.appendChild(heading);
+      for (const { term, def } of terms) {
+        const card = document.createElement('div');
+        card.className = 'glossary-term';
+        card.innerHTML = `<div class="gt-name">${term}</div><div class="gt-def">${def}</div>`;
+        glossaryGrid.appendChild(card);
+      }
+    }
+  }
+
+  const CURRENT_MISSIONS = [
+    { name: 'James Webb Space Telescope', status: 'Active', note: 'Fully operational since 2022 - the most powerful space telescope ever built.' },
+    { name: 'Hubble Space Telescope', status: 'Active', note: 'Still operating after more than 30 years, alongside JWST.' },
+    { name: 'Europa Clipper', status: 'En route', note: "Launched Oct. 2024, cruising toward Jupiter's icy moon Europa - arrives 2030." },
+    { name: 'Perseverance Rover', status: 'Active', note: 'Exploring Jezero Crater on Mars since 2021, caching samples for return to Earth.' },
+    { name: 'Curiosity Rover', status: 'Active', note: 'Climbing Mount Sharp in Gale Crater, Mars, since 2012.' },
+    { name: 'Parker Solar Probe', status: 'Active', note: "The closest any human-made object has gotten to the Sun, studying its outer atmosphere." },
+    { name: 'Voyager 1 & 2', status: 'Interstellar', note: 'Launched 1977, now the most distant human-made objects, still sending data.' },
+    { name: 'International Space Station', status: 'Active', note: 'Continuously crewed since November 2000.' },
+    { name: 'Artemis II', status: 'Completed', note: "NASA's first crewed Moon mission since Apollo - flew around the Moon in April 2026." },
+    { name: 'Artemis III', status: 'Planned', note: 'Aims to be the first crewed Moon LANDING since 1972, targeting the lunar south pole.' },
+  ];
+
+  function renderMissions() {
+    missionsGrid.innerHTML = '';
+    for (const m of CURRENT_MISSIONS) {
+      const card = document.createElement('div');
+      card.className = 'moon-card';
+      card.innerHTML = `
+        <div class="moon-name">${m.name}</div>
+        <div class="p-row"><span>Status</span><span>${m.status}</span></div>
+        <div class="moon-fact">${m.note}</div>
+      `;
+      missionsGrid.appendChild(card);
+    }
+  }
+
+  function renderHistoryTimeline() {
+    historyTimeline.innerHTML = '';
+    const entries = Object.entries(SPACE_HISTORY)
+      .map(([monthDay, data]) => ({ monthDay, ...data }))
+      .sort((a, b) => a.year - b.year);
+    for (const e of entries) {
+      const [mm, dd] = e.monthDay.split('-');
+      const card = document.createElement('div');
+      card.className = 'pass-card';
+      card.innerHTML = `
+        <div>
+          <div class="pass-date">${e.year}</div>
+          <div class="pass-detail">${mm}/${dd} \u2014 ${e.text}</div>
+        </div>
+      `;
+      historyTimeline.appendChild(card);
+    }
+  }
+
   // ---- 3D Sky Dome ----
   const DOME_RADIUS = 400;
   let domeInitialized = false;
@@ -3127,6 +3306,9 @@
   renderSpotlight();
   updateHistoryNote();
   renderMoons();
+  renderGlossary();
+  renderMissions();
+  renderHistoryTimeline();
   setMode('skymap');
   travelBtn.addEventListener('click', travel);
   travel();
